@@ -16,7 +16,6 @@ import {
   ArrowRight,
   CheckCircle,
   AlertCircle,
-  Sparkles,
   User,
   Award,
   BookOpen,
@@ -29,11 +28,17 @@ import { useAuthStore } from '../store/authStore';
 
 const Dashboard = () => {
   const { user } = useAuthStore();
-  const { children, activeChild, setActiveChild } = useChildStore();
-  const { activities, getRecommendedActivities } = useActivityStore();
+  const { children, activeChild, setActiveChild, fetchChildren, isLoading: childrenLoading } = useChildStore();
+  const { activities, fetchActivities, getRecommendedActivities, isLoading: activitiesLoading } = useActivityStore();
   const { stories, getStoriesForChild } = useLearningStoryStore();
   const [todaysActivities, setTodaysActivities] = useState<any[]>([]);
   const [recentStories, setRecentStories] = useState<any[]>([]);
+  
+  useEffect(() => {
+    // Fetch children on mount
+    fetchChildren();
+    fetchActivities();
+  }, [fetchChildren, fetchActivities]);
 
   useEffect(() => {
     if (children.length > 0 && !activeChild) {
@@ -43,9 +48,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (activeChild) {
-      const recommended = getRecommendedActivities(activeChild.id);
-      setTodaysActivities(recommended);
-      
+      getRecommendedActivities(activeChild.id).then(setTodaysActivities);
       const childStories = getStoriesForChild(activeChild.id);
       setRecentStories(childStories.slice(0, 3));
     }
@@ -76,13 +79,6 @@ const Dashboard = () => {
       icon: <Target className="w-6 h-6" />,
       color: 'from-purple-500 to-purple-600',
       link: '/therapy'
-    },
-    {
-      title: 'Celebration Mode',
-      description: 'View achievements with child',
-      icon: <Sparkles className="w-6 h-6" />,
-      color: 'from-pink-500 to-pink-600',
-      link: '/child-experience'
     }
   ];
 

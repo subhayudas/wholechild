@@ -1,8 +1,7 @@
 import express, { Request, Response } from 'express';
 const router = express.Router();
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
+import { userService } from '../services/userService';
 import { createChildLogger } from '../utils/logger';
 
 // @route   POST /api/auth/register
@@ -15,25 +14,19 @@ router.post('/register', async (req: Request, res: Response) => {
     logger.debug({ email }, 'User registration attempt');
     
     // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
+    const existingUser = await userService.findByEmail(email);
+    if (existingUser) {
       logger.warn({ email }, 'Registration failed - user already exists');
       return res.status(400).json({ msg: 'User already exists' });
     }
 
-    // Create new user
-    user = new User({
+    // Create new user (password will be hashed in service)
+    const user = await userService.create({
       name,
       email,
       password,
-      role
+      role: role as 'parent' | 'educator' | 'therapist'
     });
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-
-    await user.save();
     logger.info({ email, name, role }, 'User registered successfully');
 
     // Create and return JWT
@@ -53,7 +46,16 @@ router.post('/register', async (req: Request, res: Response) => {
           throw err;
         }
         logger.debug({ userId: user.id }, 'JWT token generated');
-        res.json({ token });
+        res.json({ 
+          token,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar
+          }
+        });
       }
     );
   } catch (err) {
@@ -72,14 +74,14 @@ router.post('/login', async (req: Request, res: Response) => {
         logger.debug({ email }, 'User login attempt');
         
         // Check if user exists
-        const user = await User.findOne({ email });
+        const user = await userService.findByEmail(email);
         if (!user) {
             logger.warn({ email }, 'Login failed - user not found');
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
         // Check password
-        const isMatch = await bcrypt.compare(password, user.password);
+        const isMatch = await userService.comparePassword(password, user.password);
         if (!isMatch) {
             logger.warn({ email, userId: user.id }, 'Login failed - invalid password');
             return res.status(400).json({ msg: 'Invalid credentials' });
@@ -102,7 +104,16 @@ router.post('/login', async (req: Request, res: Response) => {
                     throw err;
                 }
                 logger.info({ email, userId: user.id }, 'User logged in successfully');
-                res.json({ token });
+                res.json({ 
+                  token,
+                  user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    avatar: user.avatar
+                  }
+                });
             }
         );
     } catch (err) {

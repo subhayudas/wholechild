@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 interface User {
   id: string;
@@ -13,6 +15,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (userData: { name: string; email: string; password: string; role: 'parent' | 'educator' | 'therapist' }) => Promise<void>;
@@ -24,35 +27,30 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      token: null,
       
       login: async (email: string, password: string) => {
         set({ isLoading: true });
         
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const response = await authService.login({ email, password });
           
-          // Mock validation
-          if (!email || !password) {
-            throw new Error('Email and password are required');
-          }
-          
-          const mockUser: User = {
-            id: '1',
-            name: 'Sarah Johnson',
-            email,
-            role: 'parent',
-            avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150'
-          };
+          // Store token in localStorage
+          localStorage.setItem('token', response.token);
           
           set({ 
-            user: mockUser, 
+            user: response.user as User, 
             isAuthenticated: true,
+            token: response.token,
             isLoading: false 
           });
-        } catch (error) {
+          
+          toast.success('Login successful!');
+        } catch (error: any) {
           set({ isLoading: false });
-          throw error;
+          const errorMessage = error.response?.data?.msg || error.message || 'Login failed';
+          toast.error(errorMessage);
+          throw new Error(errorMessage);
         }
       },
       
@@ -60,47 +58,36 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         
         try {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          const response = await authService.register(userData);
           
-          // Mock validation
-          if (!userData.name || !userData.email || !userData.password) {
-            throw new Error('All fields are required');
-          }
-          
-          if (userData.password.length < 6) {
-            throw new Error('Password must be at least 6 characters');
-          }
-          
-          const newUser: User = {
-            id: Date.now().toString(),
-            name: userData.name,
-            email: userData.email,
-            role: userData.role,
-            avatar: userData.role === 'parent' 
-              ? 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150'
-              : userData.role === 'educator'
-                ? 'https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=150'
-                : 'https://images.pexels.com/photos/5327580/pexels-photo-5327580.jpeg?auto=compress&cs=tinysrgb&w=150'
-          };
+          // Store token in localStorage
+          localStorage.setItem('token', response.token);
           
           set({ 
-            user: newUser, 
+            user: response.user as User, 
             isAuthenticated: true,
+            token: response.token,
             isLoading: false 
           });
-        } catch (error) {
+          
+          toast.success('Registration successful!');
+        } catch (error: any) {
           set({ isLoading: false });
-          throw error;
+          const errorMessage = error.response?.data?.msg || error.message || 'Registration failed';
+          toast.error(errorMessage);
+          throw new Error(errorMessage);
         }
       },
       
       logout: () => {
+        localStorage.removeItem('token');
         set({ 
           user: null, 
           isAuthenticated: false,
+          token: null,
           isLoading: false 
         });
+        toast.success('Logged out successfully');
       }
     }),
     {
@@ -108,7 +95,8 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
         user: state.user, 
-        isAuthenticated: state.isAuthenticated 
+        isAuthenticated: state.isAuthenticated,
+        token: state.token
       }),
     }
   )

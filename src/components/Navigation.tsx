@@ -7,8 +7,6 @@ import {
   Blocks, 
   BookOpen, 
   Stethoscope, 
-  ShoppingBag, 
-  Users, 
   BarChart3, 
   Sparkles,
   LogOut,
@@ -27,10 +25,7 @@ const Navigation = () => {
     { path: '/activity-builder', icon: Blocks, label: 'Activities' },
     { path: '/learning-stories', icon: BookOpen, label: 'Learning Stories' },
     { path: '/therapy', icon: Stethoscope, label: 'Therapy Center' },
-    { path: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
-    { path: '/community', icon: Users, label: 'Community' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-    { path: '/child-experience', icon: Sparkles, label: 'Celebration Mode' },
     { path: '/admin/ai-generator', icon: Wand2, label: 'AI Generator' },
     { path: '/admin/ai-pro-generator', icon: Sliders, label: 'AI Pro Generator' }
   ];

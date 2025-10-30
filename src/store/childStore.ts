@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { childrenService } from '../services/childrenService';
+import toast from 'react-hot-toast';
 
 export interface Child {
   id: string;
@@ -50,9 +52,13 @@ export interface Child {
 interface ChildState {
   children: Child[];
   activeChild: Child | null;
-  addChild: (child: Omit<Child, 'id' | 'activityHistory' | 'achievements' | 'totalPoints' | 'currentStreak'>) => void;
-  updateChild: (id: string, updates: Partial<Child>) => void;
-  setActiveChild: (child: Child) => void;
+  isLoading: boolean;
+  error: string | null;
+  fetchChildren: () => Promise<void>;
+  addChild: (child: Omit<Child, 'id' | 'activityHistory' | 'achievements' | 'totalPoints' | 'currentStreak'>) => Promise<void>;
+  updateChild: (id: string, updates: Partial<Child>) => Promise<void>;
+  deleteChild: (id: string) => Promise<void>;
+  setActiveChild: (child: Child | null) => void;
   getChildById: (id: string) => Child | undefined;
   completeActivity: (childId: string, activityData: {
     activityId: string;
@@ -60,96 +66,149 @@ interface ChildState {
     notes: string;
     photos: string[];
     observations: string[];
-  }) => void;
-  addAchievement: (childId: string, achievement: Omit<Child['achievements'][0], 'unlockedAt'>) => void;
+  }) => Promise<void>;
+  addAchievement: (childId: string, achievement: Omit<Child['achievements'][0], 'unlockedAt'>) => Promise<void>;
   updatePoints: (childId: string, points: number) => void;
   updateStreak: (childId: string) => void;
 }
 
+// Helper function to convert MongoDB document to Child format
+const mapChildFromDB = (dbChild: any): Child => {
+  return {
+    id: dbChild._id || dbChild.id,
+    name: dbChild.name,
+    age: dbChild.age,
+    avatar: dbChild.avatar,
+    interests: dbChild.interests || [],
+    sensoryNeeds: dbChild.sensoryNeeds || [],
+    speechGoals: dbChild.speechGoals || [],
+    otGoals: dbChild.otGoals || [],
+    developmentalProfile: dbChild.developmentalProfile || {
+      cognitive: 0,
+      language: 0,
+      social: 0,
+      physical: 0,
+      creative: 0
+    },
+    currentLevel: dbChild.currentLevel || {
+      math: 0,
+      reading: 0,
+      writing: 0,
+      science: 0
+    },
+    preferences: dbChild.preferences || {
+      learningStyle: 'visual',
+      energyLevel: 'medium',
+      socialPreference: 'small-group'
+    },
+    activityHistory: (dbChild.activityHistory || []).map((ah: any) => ({
+      ...ah,
+      completedAt: ah.completedAt ? new Date(ah.completedAt) : new Date()
+    })),
+    achievements: (dbChild.achievements || []).map((ach: any) => ({
+      ...ach,
+      unlockedAt: ach.unlockedAt ? new Date(ach.unlockedAt) : new Date()
+    })),
+    totalPoints: dbChild.totalPoints || 0,
+    currentStreak: dbChild.currentStreak || 0
+  };
+};
+
 export const useChildStore = create<ChildState>()(
   persist(
     (set, get) => ({
-      children: [
-        {
-          id: '1',
-          name: 'Emma',
-          age: 4,
-          avatar: 'https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg?auto=compress&cs=tinysrgb&w=150',
-          interests: ['art', 'music', 'nature', 'building'],
-          sensoryNeeds: ['movement breaks', 'quiet spaces', 'tactile input'],
-          speechGoals: ['articulation /r/ sounds', 'vocabulary expansion', 'story retelling'],
-          otGoals: ['fine motor skills', 'bilateral coordination', 'sensory regulation'],
-          developmentalProfile: {
-            cognitive: 85,
-            language: 78,
-            social: 92,
-            physical: 88,
-            creative: 95
-          },
-          currentLevel: {
-            math: 3,
-            reading: 2,
-            writing: 2,
-            science: 4
-          },
-          preferences: {
-            learningStyle: 'visual',
-            energyLevel: 'high',
-            socialPreference: 'small-group'
-          },
-          activityHistory: [
-            {
-              activityId: '1',
-              completedAt: new Date('2025-01-15'),
-              duration: 25,
-              notes: 'Emma showed great focus and really enjoyed the color sorting. She started making patterns on her own!',
-              photos: ['https://images.pexels.com/photos/8613089/pexels-photo-8613089.jpeg'],
-              observations: [
-                'Used pincer grasp consistently',
-                'Self-corrected when colors were mixed',
-                'Showed sustained attention for full activity'
-              ]
-            }
-          ],
-          achievements: [
-            {
-              id: 'first-activity',
-              title: 'First Steps',
-              description: 'Completed your first guided activity!',
-              unlockedAt: new Date('2025-01-15'),
-              category: 'milestone'
-            }
-          ],
-          totalPoints: 150,
-          currentStreak: 3
-        }
-      ],
+      children: [],
       activeChild: null,
+      isLoading: false,
+      error: null,
       
-      addChild: (child) => {
-        const newChild: Child = { 
-          ...child, 
-          id: Date.now().toString(),
-          activityHistory: [],
-          achievements: [],
-          totalPoints: 0,
-          currentStreak: 0
-        };
-        set((state) => ({ 
-          children: [...state.children, newChild],
-          activeChild: state.activeChild || newChild
-        }));
+      fetchChildren: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const children = await childrenService.getAll();
+          const mappedChildren = children.map(mapChildFromDB);
+          set({ children: mappedChildren, isLoading: false });
+          
+          // Set first child as active if none selected
+          const currentActive = get().activeChild;
+          if (!currentActive && mappedChildren.length > 0) {
+            set({ activeChild: mappedChildren[0] });
+          } else if (currentActive) {
+            // Update active child if it exists in the list
+            const updatedActive = mappedChildren.find(c => c.id === currentActive.id);
+            if (updatedActive) {
+              set({ activeChild: updatedActive });
+            }
+          }
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to fetch children';
+          set({ error: errorMessage, isLoading: false });
+          toast.error(errorMessage);
+        }
       },
       
-      updateChild: (id, updates) => {
-        set((state) => ({
-          children: state.children.map(child => 
-            child.id === id ? { ...child, ...updates } : child
-          ),
-          activeChild: state.activeChild?.id === id 
-            ? { ...state.activeChild, ...updates }
-            : state.activeChild
-        }));
+      addChild: async (child) => {
+        set({ isLoading: true, error: null });
+        try {
+          const newChild = await childrenService.create(child);
+          const mappedChild = mapChildFromDB(newChild);
+          set((state) => ({ 
+            children: [...state.children, mappedChild],
+            activeChild: state.activeChild || mappedChild,
+            isLoading: false
+          }));
+          toast.success('Child profile created successfully!');
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to create child profile';
+          set({ error: errorMessage, isLoading: false });
+          toast.error(errorMessage);
+          throw error;
+        }
+      },
+      
+      updateChild: async (id, updates) => {
+        set({ isLoading: true, error: null });
+        try {
+          const updatedChild = await childrenService.update(id, updates);
+          const mappedChild = mapChildFromDB(updatedChild);
+          set((state) => ({
+            children: state.children.map(child => 
+              child.id === id ? mappedChild : child
+            ),
+            activeChild: state.activeChild?.id === id ? mappedChild : state.activeChild,
+            isLoading: false
+          }));
+          toast.success('Child profile updated successfully!');
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to update child profile';
+          set({ error: errorMessage, isLoading: false });
+          toast.error(errorMessage);
+          throw error;
+        }
+      },
+
+      deleteChild: async (id) => {
+        set({ isLoading: true, error: null });
+        try {
+          await childrenService.delete(id);
+          set((state) => {
+            const filtered = state.children.filter(child => child.id !== id);
+            const newActive = state.activeChild?.id === id 
+              ? (filtered.length > 0 ? filtered[0] : null)
+              : state.activeChild;
+            return {
+              children: filtered,
+              activeChild: newActive,
+              isLoading: false
+            };
+          });
+          toast.success('Child profile deleted successfully!');
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to delete child profile';
+          set({ error: errorMessage, isLoading: false });
+          toast.error(errorMessage);
+          throw error;
+        }
       },
       
       setActiveChild: (child) => {
@@ -160,47 +219,40 @@ export const useChildStore = create<ChildState>()(
         return get().children.find(child => child.id === id);
       },
 
-      completeActivity: (childId, activityData) => {
-        set((state) => ({
-          children: state.children.map(child => 
-            child.id === childId 
-              ? { 
-                  ...child, 
-                  activityHistory: [...child.activityHistory, {
-                    ...activityData,
-                    completedAt: new Date()
-                  }],
-                  totalPoints: child.totalPoints + 25, // Base points for completion
-                  currentStreak: child.currentStreak + 1
-                }
-              : child
-          ),
-          activeChild: state.activeChild?.id === childId
-            ? {
-                ...state.activeChild,
-                activityHistory: [...state.activeChild.activityHistory, {
-                  ...activityData,
-                  completedAt: new Date()
-                }],
-                totalPoints: state.activeChild.totalPoints + 25,
-                currentStreak: state.activeChild.currentStreak + 1
-              }
-            : state.activeChild
-        }));
+      completeActivity: async (childId, activityData) => {
+        try {
+          const updatedChild = await childrenService.completeActivity(childId, activityData);
+          const mappedChild = mapChildFromDB(updatedChild);
+          set((state) => ({
+            children: state.children.map(child => 
+              child.id === childId ? mappedChild : child
+            ),
+            activeChild: state.activeChild?.id === childId ? mappedChild : state.activeChild
+          }));
+          toast.success('Activity completed and recorded!');
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to record activity completion';
+          toast.error(errorMessage);
+          throw error;
+        }
       },
 
-      addAchievement: (childId, achievement) => {
-        const newAchievement = { ...achievement, unlockedAt: new Date() };
-        set((state) => ({
-          children: state.children.map(child => 
-            child.id === childId 
-              ? { ...child, achievements: [...child.achievements, newAchievement] }
-              : child
-          ),
-          activeChild: state.activeChild?.id === childId
-            ? { ...state.activeChild, achievements: [...state.activeChild.achievements, newAchievement] }
-            : state.activeChild
-        }));
+      addAchievement: async (childId, achievement) => {
+        try {
+          const updatedChild = await childrenService.addAchievement(childId, achievement);
+          const mappedChild = mapChildFromDB(updatedChild);
+          set((state) => ({
+            children: state.children.map(child => 
+              child.id === childId ? mappedChild : child
+            ),
+            activeChild: state.activeChild?.id === childId ? mappedChild : state.activeChild
+          }));
+          toast.success('Achievement added!');
+        } catch (error: any) {
+          const errorMessage = error.response?.data?.msg || error.message || 'Failed to add achievement';
+          toast.error(errorMessage);
+          throw error;
+        }
       },
 
       updatePoints: (childId, points) => {
@@ -211,7 +263,7 @@ export const useChildStore = create<ChildState>()(
               : child
           ),
           activeChild: state.activeChild?.id === childId
-            ? { ...state.activeChild, totalPoints: state.activeChild.totalPoints + points }
+            ? { ...state.activeChild, totalPoints: (state.activeChild.totalPoints || 0) + points }
             : state.activeChild
         }));
       },
@@ -224,7 +276,7 @@ export const useChildStore = create<ChildState>()(
               : child
           ),
           activeChild: state.activeChild?.id === childId
-            ? { ...state.activeChild, currentStreak: state.activeChild.currentStreak + 1 }
+            ? { ...state.activeChild, currentStreak: (state.activeChild.currentStreak || 0) + 1 }
             : state.activeChild
         }));
       }
@@ -232,6 +284,9 @@ export const useChildStore = create<ChildState>()(
     {
       name: 'wholechild-children',
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ 
+        activeChild: state.activeChild
+      }),
     }
   )
 );
