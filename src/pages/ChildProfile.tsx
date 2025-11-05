@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -23,15 +23,24 @@ import {
 import { useChildStore } from '../store/childStore';
 import { useLearningStoryStore } from '../store/learningStoryStore';
 import { useActivityStore } from '../store/activityStore';
+import { useAuthStore } from '../store/authStore';
 import ChildProfileForm from '../components/ChildProfileForm';
 import toast from 'react-hot-toast';
 
 const ChildProfile = () => {
-  const { children, activeChild, setActiveChild } = useChildStore();
+  const { children, activeChild, setActiveChild, fetchChildren } = useChildStore();
   const { getStoriesForChild } = useLearningStoryStore();
   const { activities } = useActivityStore();
+  const { isAuthenticated } = useAuthStore();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [editingChild, setEditingChild] = useState(null);
+
+  // Fetch children when component mounts and user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchChildren();
+    }
+  }, [isAuthenticated, fetchChildren]);
 
   const childStories = activeChild ? getStoriesForChild(activeChild.id) : [];
   const recentActivities = activities.slice(0, 5); // Mock recent activities
@@ -54,10 +63,15 @@ const ChildProfile = () => {
     setShowProfileForm(true);
   };
 
-  const handleDeleteProfile = (childId: string) => {
+  const handleDeleteProfile = async (childId: string) => {
     if (window.confirm('Are you sure you want to delete this profile?')) {
-      // In a real app, this would call deleteChild from the store
-      toast.success('Profile deleted successfully');
+      try {
+        const { deleteChild } = useChildStore.getState();
+        await deleteChild(childId);
+        toast.success('Profile deleted successfully');
+      } catch (error) {
+        // Error already shown by deleteChild
+      }
     }
   };
 
@@ -88,7 +102,11 @@ const ChildProfile = () => {
             <ChildProfileForm
               child={editingChild}
               onClose={() => setShowProfileForm(false)}
-              onSave={() => setShowProfileForm(false)}
+              onSave={async () => {
+                setShowProfileForm(false);
+                // Refresh children list after saving
+                await fetchChildren();
+              }}
             />
           )}
         </AnimatePresence>
@@ -457,7 +475,11 @@ const ChildProfile = () => {
             <ChildProfileForm
               child={editingChild}
               onClose={() => setShowProfileForm(false)}
-              onSave={() => setShowProfileForm(false)}
+              onSave={async () => {
+                setShowProfileForm(false);
+                // Refresh children list after saving
+                await fetchChildren();
+              }}
             />
           )}
         </AnimatePresence>

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { authService } from '../services/authService';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -15,10 +16,11 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (userData: { name: string; email: string; password: string; role: 'parent' | 'educator' | 'therapist' }) => Promise<void>;
+  session: any | null;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  setUser: (supabaseUser: SupabaseUser | null) => void;
+  setSession: (session: any) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -27,68 +29,114 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      token: null,
+      session: null,
       
-      login: async (email: string, password: string) => {
+      signInWithGoogle: async () => {
         set({ isLoading: true });
         
         try {
-          const response = await authService.login({ email, password });
-          
-          // Store token in localStorage
-          localStorage.setItem('token', response.token);
-          
-          set({ 
-            user: response.user as User, 
-            isAuthenticated: true,
-            token: response.token,
-            isLoading: false 
+          const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: `${window.location.origin}`,
+            },
           });
           
-          toast.success('Login successful!');
+          if (error) {
+            throw error;
+          }
+          
+          // The actual authentication will happen after redirect
+          // We'll handle it in the auth state listener
         } catch (error: any) {
           set({ isLoading: false });
-          const errorMessage = error.response?.data?.msg || error.message || 'Login failed';
+          const errorMessage = error.message || 'Sign in failed';
           toast.error(errorMessage);
           throw new Error(errorMessage);
         }
       },
       
-      register: async (userData) => {
+      signOut: async () => {
         set({ isLoading: true });
         
         try {
-          const response = await authService.register(userData);
+          const { error } = await supabase.auth.signOut();
           
-          // Store token in localStorage
-          localStorage.setItem('token', response.token);
+          if (error) {
+            throw error;
+          }
           
           set({ 
-            user: response.user as User, 
-            isAuthenticated: true,
-            token: response.token,
+            user: null, 
+            isAuthenticated: false,
+            session: null,
             isLoading: false 
           });
           
-          toast.success('Registration successful!');
+          toast.success('Signed out successfully');
         } catch (error: any) {
           set({ isLoading: false });
-          const errorMessage = error.response?.data?.msg || error.message || 'Registration failed';
-          toast.error(errorMessage);
-          throw new Error(errorMessage);
+          toast.error('Error signing out');
+          throw error;
         }
       },
       
-      logout: () => {
-        localStorage.removeItem('token');
+      setUser: (supabaseUser: SupabaseUser | null) => {
+        if (!supabaseUser) {
+          set({ 
+            user: null, 
+            isAuthenticated: false 
+          });
+          return;
+        }
+        
+        // Extract user metadata (role might be in metadata or default to parent)
+        const userMetadata = supabaseUser.user_metadata || {};
+        const role = (userMetadata.role as 'parent' | 'educator' | 'therapist') || 'parent';
+        
+        const user: User = {
+          id: supabaseUser.id,
+          name: userMetadata.full_name || userMetadata.name || supabaseUser.email?.split('@')[0] || 'User',
+          email: supabaseUser.email || '',
+          role: role,
+          avatar: userMetadata.avatar_url || userMetadata.picture || supabaseUser.identities?.[0]?.identity_data?.avatar_url,
+        };
+        
         set({ 
-          user: null, 
-          isAuthenticated: false,
-          token: null,
-          isLoading: false 
+          user, 
+          isAuthenticated: true 
         });
-        toast.success('Logged out successfully');
-      }
+      },
+      
+      setSession: (session: any) => {
+        set({ session, isLoading: false });
+        
+        if (session?.user) {
+          // Check if session is expired and refresh if needed (in background)
+          const expiresAt = session.expires_at;
+          const now = Math.floor(Date.now() / 1000);
+          
+          if (expiresAt && expiresAt - now < 60) {
+            // Session expires soon, refresh in background
+            supabase.auth.refreshSession(session).then(({ data: { session: refreshedSession }, error }) => {
+              if (!error && refreshedSession) {
+                set({ session: refreshedSession });
+                get().setUser(refreshedSession.user);
+              } else {
+                // Refresh failed, use current session
+                get().setUser(session.user);
+              }
+            }).catch((error) => {
+              console.error('Error refreshing session:', error);
+              get().setUser(session.user); // Use current session
+            });
+          }
+          
+          get().setUser(session.user);
+        } else {
+          get().setUser(null);
+        }
+      },
     }),
     {
       name: 'wholechild-auth',
@@ -96,7 +144,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({ 
         user: state.user, 
         isAuthenticated: state.isAuthenticated,
-        token: state.token
       }),
     }
   )

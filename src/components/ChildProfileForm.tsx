@@ -176,29 +176,40 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
     updateFormData('sensoryNeeds', newNeeds.length ? newNeeds : ['']);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error('Please enter a name');
       return;
     }
 
+    // Prepare child data - only include fields that match CreateChildData interface
     const childData = {
-      ...formData,
+      name: formData.name.trim(),
+      age: formData.age,
+      avatar: formData.avatar || '',
       interests: formData.interests.filter(i => i.trim()),
       sensoryNeeds: formData.sensoryNeeds.filter(n => n.trim()),
       speechGoals: formData.speechGoals.filter(g => g.trim()),
-      otGoals: formData.otGoals.filter(g => g.trim())
+      otGoals: formData.otGoals.filter(g => g.trim()),
+      developmentalProfile: formData.developmentalProfile,
+      currentLevel: formData.currentLevel,
+      preferences: formData.preferences
     };
 
-    if (child) {
-      updateChild(child.id, childData);
-      toast.success('Profile updated successfully!');
-    } else {
-      addChild(childData);
-      toast.success('Profile created successfully!');
+    try {
+      if (child) {
+        await updateChild(child.id, childData);
+      } else {
+        await addChild(childData);
+      }
+      // Call onSave after successful save - this will refresh the list and close the form
+      // The store already shows success/error toast messages
+      onSave();
+    } catch (error) {
+      // Error handling is done in the store - toast is already shown there
+      // Don't close the form if there's an error, so user can retry
+      console.error('Error saving child profile:', error);
     }
-
-    onSave();
   };
 
   const renderStep = () => {

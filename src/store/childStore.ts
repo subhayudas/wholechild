@@ -72,47 +72,8 @@ interface ChildState {
   updateStreak: (childId: string) => void;
 }
 
-// Helper function to convert MongoDB document to Child format
-const mapChildFromDB = (dbChild: any): Child => {
-  return {
-    id: dbChild._id || dbChild.id,
-    name: dbChild.name,
-    age: dbChild.age,
-    avatar: dbChild.avatar,
-    interests: dbChild.interests || [],
-    sensoryNeeds: dbChild.sensoryNeeds || [],
-    speechGoals: dbChild.speechGoals || [],
-    otGoals: dbChild.otGoals || [],
-    developmentalProfile: dbChild.developmentalProfile || {
-      cognitive: 0,
-      language: 0,
-      social: 0,
-      physical: 0,
-      creative: 0
-    },
-    currentLevel: dbChild.currentLevel || {
-      math: 0,
-      reading: 0,
-      writing: 0,
-      science: 0
-    },
-    preferences: dbChild.preferences || {
-      learningStyle: 'visual',
-      energyLevel: 'medium',
-      socialPreference: 'small-group'
-    },
-    activityHistory: (dbChild.activityHistory || []).map((ah: any) => ({
-      ...ah,
-      completedAt: ah.completedAt ? new Date(ah.completedAt) : new Date()
-    })),
-    achievements: (dbChild.achievements || []).map((ach: any) => ({
-      ...ach,
-      unlockedAt: ach.unlockedAt ? new Date(ach.unlockedAt) : new Date()
-    })),
-    totalPoints: dbChild.totalPoints || 0,
-    currentStreak: dbChild.currentStreak || 0
-  };
-};
+// Note: childrenService already maps data from Supabase format to Child format
+// So we can use the data directly without additional mapping
 
 export const useChildStore = create<ChildState>()(
   persist(
@@ -126,22 +87,21 @@ export const useChildStore = create<ChildState>()(
         set({ isLoading: true, error: null });
         try {
           const children = await childrenService.getAll();
-          const mappedChildren = children.map(mapChildFromDB);
-          set({ children: mappedChildren, isLoading: false });
+          set({ children, isLoading: false });
           
           // Set first child as active if none selected
           const currentActive = get().activeChild;
-          if (!currentActive && mappedChildren.length > 0) {
-            set({ activeChild: mappedChildren[0] });
+          if (!currentActive && children.length > 0) {
+            set({ activeChild: children[0] });
           } else if (currentActive) {
             // Update active child if it exists in the list
-            const updatedActive = mappedChildren.find(c => c.id === currentActive.id);
+            const updatedActive = children.find(c => c.id === currentActive.id);
             if (updatedActive) {
               set({ activeChild: updatedActive });
             }
           }
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to fetch children';
+          const errorMessage = error.message || 'Failed to fetch children';
           set({ error: errorMessage, isLoading: false });
           toast.error(errorMessage);
         }
@@ -151,15 +111,14 @@ export const useChildStore = create<ChildState>()(
         set({ isLoading: true, error: null });
         try {
           const newChild = await childrenService.create(child);
-          const mappedChild = mapChildFromDB(newChild);
           set((state) => ({ 
-            children: [...state.children, mappedChild],
-            activeChild: state.activeChild || mappedChild,
+            children: [...state.children, newChild],
+            activeChild: state.activeChild || newChild,
             isLoading: false
           }));
           toast.success('Child profile created successfully!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to create child profile';
+          const errorMessage = error.message || 'Failed to create child profile';
           set({ error: errorMessage, isLoading: false });
           toast.error(errorMessage);
           throw error;
@@ -170,17 +129,16 @@ export const useChildStore = create<ChildState>()(
         set({ isLoading: true, error: null });
         try {
           const updatedChild = await childrenService.update(id, updates);
-          const mappedChild = mapChildFromDB(updatedChild);
           set((state) => ({
             children: state.children.map(child => 
-              child.id === id ? mappedChild : child
+              child.id === id ? updatedChild : child
             ),
-            activeChild: state.activeChild?.id === id ? mappedChild : state.activeChild,
+            activeChild: state.activeChild?.id === id ? updatedChild : state.activeChild,
             isLoading: false
           }));
           toast.success('Child profile updated successfully!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to update child profile';
+          const errorMessage = error.message || 'Failed to update child profile';
           set({ error: errorMessage, isLoading: false });
           toast.error(errorMessage);
           throw error;
@@ -204,7 +162,7 @@ export const useChildStore = create<ChildState>()(
           });
           toast.success('Child profile deleted successfully!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to delete child profile';
+          const errorMessage = error.message || 'Failed to delete child profile';
           set({ error: errorMessage, isLoading: false });
           toast.error(errorMessage);
           throw error;
@@ -222,16 +180,15 @@ export const useChildStore = create<ChildState>()(
       completeActivity: async (childId, activityData) => {
         try {
           const updatedChild = await childrenService.completeActivity(childId, activityData);
-          const mappedChild = mapChildFromDB(updatedChild);
           set((state) => ({
             children: state.children.map(child => 
-              child.id === childId ? mappedChild : child
+              child.id === childId ? updatedChild : child
             ),
-            activeChild: state.activeChild?.id === childId ? mappedChild : state.activeChild
+            activeChild: state.activeChild?.id === childId ? updatedChild : state.activeChild
           }));
           toast.success('Activity completed and recorded!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to record activity completion';
+          const errorMessage = error.message || 'Failed to record activity completion';
           toast.error(errorMessage);
           throw error;
         }
@@ -240,16 +197,15 @@ export const useChildStore = create<ChildState>()(
       addAchievement: async (childId, achievement) => {
         try {
           const updatedChild = await childrenService.addAchievement(childId, achievement);
-          const mappedChild = mapChildFromDB(updatedChild);
           set((state) => ({
             children: state.children.map(child => 
-              child.id === childId ? mappedChild : child
+              child.id === childId ? updatedChild : child
             ),
-            activeChild: state.activeChild?.id === childId ? mappedChild : state.activeChild
+            activeChild: state.activeChild?.id === childId ? updatedChild : state.activeChild
           }));
           toast.success('Achievement added!');
         } catch (error: any) {
-          const errorMessage = error.response?.data?.msg || error.message || 'Failed to add achievement';
+          const errorMessage = error.message || 'Failed to add achievement';
           toast.error(errorMessage);
           throw error;
         }

@@ -17,7 +17,7 @@ import { useAuthStore } from '../store/authStore';
 
 const Navigation = () => {
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, signOut } = useAuthStore();
 
   const navItems = [
     { path: '/', icon: Home, label: 'Dashboard' },
@@ -95,9 +95,9 @@ const Navigation = () => {
             </div>
             
             <button
-              onClick={logout}
+              onClick={signOut}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              title="Logout"
+              title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
             </button>

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { 
   Heart, 
   Users, 
@@ -21,216 +22,215 @@ import {
   GraduationCap,
   Stethoscope,
   Home,
+  Loader2,
   Mail,
-  Lock,
-  AlertCircle,
-  Loader2
+  Menu,
+  SendHorizonal,
+  X
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import toast from 'react-hot-toast';
+import { Button } from '../components/ui/Button';
+import { cn } from '../lib/utils';
+
+const menuItems = [
+  { name: 'Features', href: '#features' },
+  { name: 'Solution', href: '#solution' },
+  { name: 'Pricing', href: '#pricing' },
+  { name: 'About', href: '#about' },
+];
 
 const LandingPage = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    role: 'parent' as 'parent' | 'educator' | 'therapist' 
-  });
-  const [loginErrors, setLoginErrors] = useState<{ [key: string]: string }>({});
-  const [registerErrors, setRegisterErrors] = useState<{ [key: string]: string }>({});
+  const [menuState, setMenuState] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
-  const { login, register, isLoading } = useAuthStore();
+  const { signInWithGoogle, isLoading } = useAuthStore();
 
+  // Ensure video plays continuously
   useEffect(() => {
-    setIsVisible(true);
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch((error) => {
+        console.log('Video autoplay prevented:', error);
+      });
+      
+      // Prevent video from pausing
+      const handlePause = () => {
+        video.play();
+      };
+      
+      video.addEventListener('pause', handlePause);
+      
+      return () => {
+        video.removeEventListener('pause', handlePause);
+      };
+    }
   }, []);
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validateLoginForm = () => {
-    const errors: { [key: string]: string } = {};
-    
-    if (!loginData.email) {
-      errors.email = 'Email is required';
-    } else if (!validateEmail(loginData.email)) {
-      errors.email = 'Please enter a valid email';
-    }
-    
-    if (!loginData.password) {
-      errors.password = 'Password is required';
-    }
-    
-    setLoginErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const validateRegisterForm = () => {
-    const errors: { [key: string]: string } = {};
-    
-    if (!registerData.name.trim()) {
-      errors.name = 'Name is required';
-    } else if (registerData.name.trim().length < 2) {
-      errors.name = 'Name must be at least 2 characters';
-    }
-    
-    if (!registerData.email) {
-      errors.email = 'Email is required';
-    } else if (!validateEmail(registerData.email)) {
-      errors.email = 'Please enter a valid email';
-    }
-    
-    if (!registerData.password) {
-      errors.password = 'Password is required';
-    } else if (registerData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
-    }
-    
-    setRegisterErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateLoginForm()) {
-      return;
-    }
-    
+  const handleGoogleSignIn = async () => {
     try {
-      await login(loginData.email, loginData.password);
-      toast.success('Welcome back!');
-      setShowLogin(false);
+      await signInWithGoogle();
     } catch (error: any) {
-      toast.error(error.message || 'Login failed. Please try again.');
+      // Error is already handled in the store
+      console.error('Google sign in error:', error);
     }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateRegisterForm()) {
-      return;
-    }
-    
-    try {
-      await register(registerData);
-      toast.success('Account created successfully! Welcome to WholeChild!');
-      setShowRegister(false);
-    } catch (error: any) {
-      toast.error(error.message || 'Registration failed. Please try again.');
-    }
-  };
-
-  const resetForms = () => {
-    setLoginData({ email: '', password: '' });
-    setRegisterData({ name: '', email: '', password: '', role: 'parent' });
-    setLoginErrors({});
-    setRegisterErrors({});
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      {/* Hero Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
-        transition={{ duration: 0.8 }}
-        className="relative overflow-hidden"
-      >
-        {/* Navigation */}
-        <nav className="relative z-10 flex items-center justify-between p-6 lg:px-8">
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
+      <header>
+        <nav
+          data-state={menuState ? 'active' : undefined}
+          className="group fixed z-20 w-full border-b border-dashed bg-white backdrop-blur md:relative dark:bg-zinc-950/50 lg:dark:bg-transparent">
+          <div className="w-full px-6 lg:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
+              <div className="flex w-full justify-between lg:w-auto">
+                <Link
+                  to="/"
+                  aria-label="home"
+                  className="flex items-center space-x-2">
+                  <Logo />
+                </Link>
+                <button
+                  onClick={() => setMenuState(!menuState)}
+                  aria-label={menuState ? 'Close Menu' : 'Open Menu'}
+                  className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden">
+                  <Menu className={cn(
+                    "m-auto size-6 duration-200",
+                    menuState && "rotate-180 scale-0 opacity-0"
+                  )} />
+                  <X className={cn(
+                    "absolute inset-0 m-auto size-6 duration-200 -rotate-180 scale-0 opacity-0",
+                    menuState && "rotate-0 scale-100 opacity-100"
+                  )} />
+                </button>
+              </div>
+              <div className={cn(
+                "bg-white dark:bg-gray-900 mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent",
+                menuState && "block lg:flex"
+              )}>
+                <div className="lg:pr-4">
+                  <ul className="space-y-6 text-base lg:flex lg:gap-8 lg:space-y-0 lg:text-sm">
+                    {menuItems.map((item, index) => (
+                      <li key={index}>
+                        <a
+                          href={item.href}
+                          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 block duration-150">
+                          <span>{item.name}</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit lg:border-l lg:pl-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); handleGoogleSignIn(); }}>
+                    <span>Login</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleGoogleSignIn}
+                    disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <span>Signing in...</span>
+                      </>
+                    ) : (
+                      <span>Get Started</span>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              WholeChild
-            </span>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => {
-                resetForms();
-                setShowLogin(true);
-              }}
-              className="px-4 py-2 text-gray-700 hover:text-purple-600 transition-colors"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => {
-                resetForms();
-                setShowRegister(true);
-              }}
-              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all duration-200"
-            >
-              Get Started
-            </button>
           </div>
         </nav>
+      </header>
 
-        {/* Hero Content */}
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
-          <div className="text-center">
-            <motion.h1 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.8 }}
-              className="text-5xl lg:text-7xl font-bold text-gray-900 mb-6"
+      <main>
+        <section className="relative w-full overflow-hidden min-h-[600px]">
+          {/* Background Video Section - Full Width */}
+          <div className="absolute inset-0 w-full h-full">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ pointerEvents: 'none' }}
+              onPause={(e) => {
+                e.preventDefault();
+                e.currentTarget.play();
+              }}
             >
-              Nurture Every
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent block">
-                Child's Potential
-              </span>
-            </motion.h1>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto"
-            >
-              A comprehensive platform connecting parents, educators, and therapists to support 
-              holistic child development through personalized activities, progress tracking, and expert guidance.
-            </motion.p>
-            
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.8 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
-            >
-              <button
-                onClick={() => {
-                  resetForms();
-                  setShowRegister(true);
-                }}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
-              >
-                <span>Start Your Journey</span>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button className="px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:border-purple-300 hover:text-purple-600 transition-all duration-200 flex items-center justify-center space-x-2">
-                <Play className="w-5 h-5" />
-                <span>Watch Demo</span>
-              </button>
-            </motion.div>
+              <source src="/herobackground.mp4" type="video/mp4" />
+            </video>
+            {/* Overlay gradient for better text readability */}
+            <div aria-hidden className="absolute z-[1] inset-0 bg-gradient-to-r from-white/80 from-35% to-transparent dark:from-zinc-950/80" />
           </div>
-        </div>
-
-        {/* Floating Elements */}
-        <div className="absolute top-20 left-10 w-20 h-20 bg-purple-200 rounded-full opacity-60 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-16 h-16 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000"></div>
-        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-indigo-200 rounded-full opacity-60 animate-pulse delay-2000"></div>
-      </motion.div>
+          
+          {/* Content Section */}
+          <div className="relative z-10 w-full px-6 lg:px-8 py-28 lg:py-20">
+            <div className="lg:flex lg:items-center lg:gap-12 max-w-7xl mx-auto">
+              <div className="relative z-10 mx-auto max-w-xl text-center lg:ml-0 lg:w-1/2 lg:text-left">
+                <Link
+                  to="/"
+                  className="rounded-lg mx-auto flex w-fit items-center gap-2 border border-gray-200 dark:border-gray-800 p-1 pr-3 lg:ml-0 hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
+                  <span className="bg-gray-100 dark:bg-gray-800 rounded-md px-2 py-1 text-xs">New</span>
+                  <span className="text-sm">Holistic Child Development Platform</span>
+                  <span className="bg-gray-200 dark:bg-gray-700 block h-4 w-px"></span>
+                  <ArrowRight className="size-4" />
+                </Link>
+                <h1 className="mt-10 text-balance text-4xl font-bold md:text-5xl xl:text-5xl">
+                  Nurture Every Child's Potential
+                </h1>
+                <p className="mt-8 text-gray-600 dark:text-gray-400">
+                  A comprehensive platform connecting parents, educators, and therapists to support 
+                  holistic child development through personalized activities, progress tracking, and expert guidance.
+                </p>
+                <div>
+                  <form
+                    action=""
+                    className="mx-auto my-10 max-w-sm lg:my-12 lg:ml-0 lg:mr-auto"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleGoogleSignIn();
+                    }}>
+                    <div className="bg-white dark:bg-gray-900 relative grid grid-cols-[1fr_auto] items-center rounded-[1rem] border border-gray-200 dark:border-gray-800 pr-1 shadow shadow-zinc-950/5 focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500">
+                      <Mail className="pointer-events-none absolute inset-y-0 left-5 my-auto size-5 text-gray-400" />
+                      <input
+                        placeholder="Your email address"
+                        className="h-14 w-full bg-transparent pl-12 focus:outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+                        type="email"
+                      />
+                      <div className="md:pr-1.5 lg:pr-0">
+                        <Button
+                          aria-label="submit"
+                          type="submit"
+                          disabled={isLoading}
+                          size="sm">
+                          <span className="hidden md:block">Get Started</span>
+                          <SendHorizonal
+                            className="relative mx-auto size-5 md:hidden"
+                            strokeWidth={2}
+                          />
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                  <ul className="list-inside list-disc space-y-2 text-gray-600 dark:text-gray-400">
+                    <li>Faster Development Tracking</li>
+                    <li>Modern Educational Methods</li>
+                    <li>100% Customizable Activities</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       {/* Features Section */}
       <section className="py-20 bg-white">
@@ -301,268 +301,19 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Login Modal */}
-      {showLogin && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-8 w-full max-w-md"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-              <button
-                onClick={() => setShowLogin(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
+    </div>
+  );
+};
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={loginData.email}
-                    onChange={(e) => {
-                      setLoginData({ ...loginData, email: e.target.value });
-                      if (loginErrors.email) {
-                        setLoginErrors({ ...loginErrors, email: '' });
-                      }
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      loginErrors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                {loginErrors.email && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {loginErrors.email}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="password"
-                    value={loginData.password}
-                    onChange={(e) => {
-                      setLoginData({ ...loginData, password: e.target.value });
-                      if (loginErrors.password) {
-                        setLoginErrors({ ...loginErrors, password: '' });
-                      }
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      loginErrors.password ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter your password"
-                  />
-                </div>
-                {loginErrors.password && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {loginErrors.password}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Signing In...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-gray-600">
-                Don't have an account?{' '}
-                <button
-                  onClick={() => {
-                    setShowLogin(false);
-                    setShowRegister(true);
-                  }}
-                  className="text-purple-600 hover:text-purple-700 font-semibold"
-                >
-                  Sign up
-                </button>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Register Modal */}
-      {showRegister && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-8 w-full max-w-md"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Join WholeChild</h2>
-              <button
-                onClick={() => setShowRegister(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={registerData.name}
-                  onChange={(e) => {
-                    setRegisterData({ ...registerData, name: e.target.value });
-                    if (registerErrors.name) {
-                      setRegisterErrors({ ...registerErrors, name: '' });
-                    }
-                  }}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                    registerErrors.name ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter your full name"
-                />
-                {registerErrors.name && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {registerErrors.name}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    value={registerData.email}
-                    onChange={(e) => {
-                      setRegisterData({ ...registerData, email: e.target.value });
-                      if (registerErrors.email) {
-                        setRegisterErrors({ ...registerErrors, email: '' });
-                      }
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      registerErrors.email ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                {registerErrors.email && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {registerErrors.email}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="password"
-                    value={registerData.password}
-                    onChange={(e) => {
-                      setRegisterData({ ...registerData, password: e.target.value });
-                      if (registerErrors.password) {
-                        setRegisterErrors({ ...registerErrors, password: '' });
-                      }
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-                      registerErrors.password ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    placeholder="Create a password"
-                  />
-                </div>
-                {registerErrors.password && (
-                  <p className="mt-1 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {registerErrors.password}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  I am a...
-                </label>
-                <select
-                  value={registerData.role}
-                  onChange={(e) => setRegisterData({ ...registerData, role: e.target.value as 'parent' | 'educator' | 'therapist' })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="parent">Parent</option>
-                  <option value="educator">Educator</option>
-                  <option value="therapist">Therapist</option>
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Creating Account...
-                  </>
-                ) : (
-                  'Create Account'
-                )}
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-gray-600">
-                Already have an account?{' '}
-                <button
-                  onClick={() => {
-                    setShowRegister(false);
-                    setShowLogin(true);
-                  }}
-                  className="text-purple-600 hover:text-purple-700 font-semibold"
-                >
-                  Sign in
-                </button>
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      )}
+const Logo = ({ className }: { className?: string }) => {
+  return (
+    <div className={cn('flex items-center space-x-2', className)}>
+      <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+        <Heart className="w-6 h-6 text-white" />
+      </div>
+      <span className="text-2xl font-bold text-blue-600">
+        WholeChild
+      </span>
     </div>
   );
 };
