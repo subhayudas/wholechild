@@ -55,6 +55,8 @@ const Dashboard = () => {
   const [recentStories, setRecentStories] = useState<any[]>([]);
   const [hoveredMetric, setHoveredMetric] = useState<string | null>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('week');
+  const [selectedDevArea, setSelectedDevArea] = useState<string | null>(null);
+  const [devViewMode, setDevViewMode] = useState<'overview' | 'detailed' | 'trends'>('overview');
   
   useEffect(() => {
     // Fetch children on mount
@@ -92,12 +94,72 @@ const Dashboard = () => {
   ];
 
   const developmentalData = activeChild ? [
-    { area: 'Cognitive', progress: activeChild.developmentalProfile.cognitive },
-    { area: 'Language', progress: activeChild.developmentalProfile.language },
-    { area: 'Social', progress: activeChild.developmentalProfile.social },
-    { area: 'Physical', progress: activeChild.developmentalProfile.physical },
-    { area: 'Creative', progress: activeChild.developmentalProfile.creative }
+    { 
+      area: 'Cognitive', 
+      progress: activeChild.developmentalProfile.cognitive,
+      target: 85,
+      lastMonth: activeChild.developmentalProfile.cognitive - 8,
+      color: '#3b82f6',
+      icon: Brain,
+      description: 'Problem solving, memory, attention',
+      milestones: ['Pattern recognition', 'Logical thinking', 'Memory games'],
+      recentActivity: 'Completed puzzle challenge'
+    },
+    { 
+      area: 'Language', 
+      progress: activeChild.developmentalProfile.language,
+      target: 90,
+      lastMonth: activeChild.developmentalProfile.language - 12,
+      color: '#10b981',
+      icon: BookOpen,
+      description: 'Speaking, listening, vocabulary',
+      milestones: ['New words learned', 'Sentence formation', 'Story telling'],
+      recentActivity: 'Read 3 new books this week'
+    },
+    { 
+      area: 'Social', 
+      progress: activeChild.developmentalProfile.social,
+      target: 80,
+      lastMonth: activeChild.developmentalProfile.social - 5,
+      color: '#8b5cf6',
+      icon: Users,
+      description: 'Interaction, empathy, cooperation',
+      milestones: ['Sharing toys', 'Making friends', 'Following rules'],
+      recentActivity: 'Played cooperatively with peers'
+    },
+    { 
+      area: 'Physical', 
+      progress: activeChild.developmentalProfile.physical,
+      target: 88,
+      lastMonth: activeChild.developmentalProfile.physical - 6,
+      color: '#f59e0b',
+      icon: ActivityIcon,
+      description: 'Motor skills, coordination, strength',
+      milestones: ['Balance improvement', 'Fine motor skills', 'Gross motor skills'],
+      recentActivity: 'Mastered riding bicycle'
+    },
+    { 
+      area: 'Creative', 
+      progress: activeChild.developmentalProfile.creative,
+      target: 82,
+      lastMonth: activeChild.developmentalProfile.creative - 10,
+      color: '#ef4444',
+      icon: Palette,
+      description: 'Art, music, imagination, expression',
+      milestones: ['Drawing skills', 'Musical rhythm', 'Creative storytelling'],
+      recentActivity: 'Created original artwork'
+    }
   ] : [];
+
+  // Development progress over time data
+  const developmentProgressData = [
+    { month: 'Jan', cognitive: 65, language: 70, social: 60, physical: 75, creative: 55 },
+    { month: 'Feb', cognitive: 68, language: 72, social: 62, physical: 77, creative: 58 },
+    { month: 'Mar', cognitive: 72, language: 75, social: 65, physical: 80, creative: 62 },
+    { month: 'Apr', cognitive: 75, language: 78, social: 68, physical: 82, creative: 65 },
+    { month: 'May', cognitive: 78, language: 82, social: 70, physical: 85, creative: 68 },
+    { month: 'Jun', cognitive: 82, language: 85, social: 73, physical: 88, creative: 72 }
+  ];
 
   const activityDistribution = [
     { name: 'Cognitive', value: 35, color: '#6366f1' },
@@ -544,7 +606,7 @@ const Dashboard = () => {
             </motion.div>
           </div>
 
-          {/* Development Progress */}
+          {/* Development Overview - Clean & Organized */}
           {activeChild && (
             <motion.div
               className="border-b border-gray-100 pb-6 mb-8"
@@ -552,38 +614,342 @@ const Dashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Development Overview</h3>
-                <div className="text-xs text-gray-500">Current progress levels</div>
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Development Overview</h3>
+                  <p className="text-sm text-gray-500 mt-1">Track {activeChild.name}'s developmental progress</p>
+                </div>
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                  {(['overview', 'detailed', 'trends'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setDevViewMode(mode)}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-all duration-200 ${
+                        devViewMode === mode
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={developmentalData} layout="horizontal">
-                    <XAxis 
-                      type="number" 
-                      domain={[0, 100]} 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 12, fill: '#6b7280' }} 
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="area" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fontSize: 12, fill: '#6b7280' }} 
-                      width={80} 
-                    />
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <Tooltip content={<BarTooltip />} />
-                    <Bar 
-                      dataKey="progress" 
-                      fill="#111827" 
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+
+              {/* Overview Mode - Cards Grid */}
+              {devViewMode === 'overview' && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Development Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                    {developmentalData.map((area, index) => {
+                      const Icon = area.icon;
+                      const progressChange = area.progress - area.lastMonth;
+                      const progressPercentage = Math.min((area.progress / area.target) * 100, 100);
+                      
+                      return (
+                        <motion.div
+                          key={area.area}
+                          className={`relative p-4 rounded-lg border transition-all duration-200 cursor-pointer ${
+                            selectedDevArea === area.area
+                              ? 'border-gray-300 bg-gray-50 shadow-sm'
+                              : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                          onClick={() => setSelectedDevArea(selectedDevArea === area.area ? null : area.area)}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          whileHover={{ y: -2 }}
+                        >
+                          {/* Icon and Title */}
+                          <div className="flex items-center gap-3 mb-3">
+                            <div 
+                              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                              style={{ backgroundColor: `${area.color}15` }}
+                            >
+                              <Icon className="w-4 h-4" style={{ color: area.color }} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-medium text-gray-900 text-sm truncate">{area.area}</h4>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="text-lg font-bold text-gray-900">{area.progress}%</span>
+                                <div className={`flex items-center text-xs ${
+                                  progressChange > 0 ? 'text-green-600' : progressChange < 0 ? 'text-red-600' : 'text-gray-500'
+                                }`}>
+                                  {progressChange > 0 ? (
+                                    <ChevronUp className="w-3 h-3" />
+                                  ) : progressChange < 0 ? (
+                                    <ChevronDown className="w-3 h-3" />
+                                  ) : null}
+                                  {progressChange !== 0 && `${Math.abs(progressChange)}%`}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Progress Bar */}
+                          <div className="mb-3">
+                            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                              <span>Progress</span>
+                              <span>{area.target}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5">
+                              <motion.div
+                                className="h-1.5 rounded-full"
+                                style={{ backgroundColor: area.color }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progressPercentage}%` }}
+                                transition={{ duration: 0.8, delay: index * 0.1 }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Recent Activity */}
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">Recent:</span> {area.recentActivity}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Expanded Details */}
+                  {selectedDevArea && (
+                    <motion.div
+                      className="bg-gray-50 rounded-lg p-6 mt-4"
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {(() => {
+                        const area = developmentalData.find(d => d.area === selectedDevArea);
+                        if (!area) return null;
+                        const Icon = area.icon;
+                        
+                        return (
+                          <div>
+                            {/* Header */}
+                            <div className="flex items-start justify-between mb-6">
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className="w-12 h-12 rounded-lg flex items-center justify-center"
+                                  style={{ backgroundColor: `${area.color}20` }}
+                                >
+                                  <Icon className="w-6 h-6" style={{ color: area.color }} />
+                                </div>
+                                <div>
+                                  <h4 className="text-lg font-semibold text-gray-900">{area.area} Development</h4>
+                                  <p className="text-sm text-gray-600 mt-0.5">{area.description}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => setSelectedDevArea(null)}
+                                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                              >
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </button>
+                            </div>
+
+                            {/* Content Grid */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              {/* Milestones */}
+                              <div>
+                                <h5 className="font-medium text-gray-900 mb-3">Current Milestones</h5>
+                                <div className="space-y-2.5">
+                                  {area.milestones.map((milestone, idx) => (
+                                    <div key={idx} className="flex items-center gap-2.5">
+                                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                      <span className="text-sm text-gray-700">{milestone}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              {/* Progress Insights */}
+                              <div>
+                                <h5 className="font-medium text-gray-900 mb-3">Progress Insights</h5>
+                                <div className="space-y-3">
+                                  <div className="flex justify-between items-center py-1">
+                                    <span className="text-sm text-gray-600">Current Level</span>
+                                    <span className="font-medium text-gray-900">{area.progress}%</span>
+                                  </div>
+                                  <div className="flex justify-between items-center py-1">
+                                    <span className="text-sm text-gray-600">Target Level</span>
+                                    <span className="font-medium text-gray-900">{area.target}%</span>
+                                  </div>
+                                  <div className="flex justify-between items-center py-1">
+                                    <span className="text-sm text-gray-600">Monthly Growth</span>
+                                    <span className={`font-medium ${
+                                      area.progress - area.lastMonth > 0 ? 'text-green-600' : 'text-gray-900'
+                                    }`}>
+                                      +{area.progress - area.lastMonth}%
+                                    </span>
+                                  </div>
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Recommendation:</span> Continue current activities and add more {area.area.toLowerCase()} challenges.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Detailed Mode - Bar Chart */}
+              {devViewMode === 'detailed' && (
+                <motion.div
+                  key="detailed"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="h-72"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={developmentalData} 
+                      layout="horizontal" 
+                      margin={{ left: 80, right: 20, top: 20, bottom: 20 }}
+                    >
+                      <XAxis 
+                        type="number" 
+                        domain={[0, 100]} 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fontSize: 12, fill: '#6b7280' }} 
+                      />
+                      <YAxis 
+                        type="category" 
+                        dataKey="area" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tick={{ fontSize: 12, fill: '#6b7280' }} 
+                        width={70} 
+                      />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                      <Tooltip content={<BarTooltip />} />
+                      <Bar 
+                        dataKey="progress" 
+                        fill="#374151" 
+                        radius={[0, 4, 4, 0]}
+                        name="Current Progress"
+                      />
+                      <Bar 
+                        dataKey="target" 
+                        fill="#e5e7eb" 
+                        radius={[0, 4, 4, 0]}
+                        opacity={0.4}
+                        name="Target"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </motion.div>
+              )}
+
+              {/* Trends Mode - Line Chart */}
+              {devViewMode === 'trends' && (
+                <motion.div
+                  key="trends"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="h-72 mb-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart 
+                        data={developmentProgressData}
+                        margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+                      >
+                        <XAxis 
+                          dataKey="month" 
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          domain={[0, 100]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fill: '#6b7280' }}
+                        />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'white',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="cognitive" 
+                          stroke="#3b82f6" 
+                          strokeWidth={2} 
+                          dot={{ fill: '#3b82f6', strokeWidth: 2, r: 3 }}
+                          name="Cognitive"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="language" 
+                          stroke="#10b981" 
+                          strokeWidth={2} 
+                          dot={{ fill: '#10b981', strokeWidth: 2, r: 3 }}
+                          name="Language"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="social" 
+                          stroke="#8b5cf6" 
+                          strokeWidth={2} 
+                          dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 3 }}
+                          name="Social"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="physical" 
+                          stroke="#f59e0b" 
+                          strokeWidth={2} 
+                          dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
+                          name="Physical"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="creative" 
+                          stroke="#ef4444" 
+                          strokeWidth={2} 
+                          dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
+                          name="Creative"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {developmentalData.map((area) => (
+                      <div key={area.area} className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: area.color }}
+                        ></div>
+                        <span className="text-sm text-gray-600">{area.area}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
