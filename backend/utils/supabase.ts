@@ -49,7 +49,8 @@ export const getSupabaseClient = (): SupabaseClient => {
 export const checkSupabaseHealth = async (): Promise<boolean> => {
   try {
     const client = getSupabaseClient();
-    const { error } = await client.from('users').select('count').limit(1);
+    // Use a simple query that works with service key (bypasses RLS)
+    const { error } = await client.from('users').select('id').limit(1);
     
     if (error) {
       logger.error({ error }, 'Supabase health check failed');

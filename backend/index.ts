@@ -82,8 +82,21 @@ app.get('/health/database', async (req: Request, res: Response) => {
   }
 });
 
-// Error logging middleware (should be last)
-app.use(errorLoggingMiddleware);
+// Error handling middleware (should be last)
+app.use((err: Error, req: Request, res: Response, next: express.NextFunction) => {
+  errorLoggingMiddleware(err, req, res, next);
+  
+  // Send error response
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
+// 404 handler
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: 'Route not found' });
+});
 
 app.listen(PORT, () => {
   logger.info({ port: PORT }, `Server is running on http://localhost:${PORT}`);

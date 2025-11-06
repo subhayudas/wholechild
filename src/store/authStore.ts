@@ -112,27 +112,81 @@ export const useAuthStore = create<AuthState>()(
         set({ session, isLoading: false });
         
         if (session?.user) {
-          // Check if session is expired and refresh if needed (in background)
+          // Only refresh if session is actually expiring soon (within 5 minutes)
+          // This prevents unnecessary refreshes right after sign-in
           const expiresAt = session.expires_at;
           const now = Math.floor(Date.now() / 1000);
           
-          if (expiresAt && expiresAt - now < 60) {
-            // Session expires soon, refresh in background
-            supabase.auth.refreshSession(session).then(({ data: { session: refreshedSession }, error }) => {
-              if (!error && refreshedSession) {
-                set({ session: refreshedSession });
-                get().setUser(refreshedSession.user);
+          if (expiresAt && expiresAt > now) {
+            // Session is valid
+            const timeUntilExpiry = expiresAt - now;
+            
+            // Only refresh if session expires within 5 minutes (300 seconds)
+            // This gives enough buffer while avoiding immediate refreshes after sign-in
+            if (timeUntilExpiry < 300 && timeUntilExpiry > 0) {
+              // Session expires soon, refresh in background
+              // Only refresh if session is valid and has required properties
+              if (session && session.refresh_token && session.access_token) {
+                supabase.auth.refreshSession(session).then(({ data: { session: refreshedSession }, error }) => {
+                  if (!error && refreshedSession) {
+                    set({ session: refreshedSession });
+                    get().setUser(refreshedSession.user);
+                  } else {
+                    // Refresh failed, but session is still valid, use current session
+                    console.warn('Session refresh failed, but session is still valid:', error);
+                    get().setUser(session.user);
+                  }
+                }).catch((error) => {
+                  console.error('Error refreshing session:', error);
+                  // Session is still valid, use it
+                  get().setUser(session.user);
+                });
               } else {
-                // Refresh failed, use current session
+                // Session doesn't have required properties, just set the user
                 get().setUser(session.user);
               }
-            }).catch((error) => {
-              console.error('Error refreshing session:', error);
-              get().setUser(session.user); // Use current session
-            });
+            } else {
+              // Session is valid and not expiring soon, just set the user
+              get().setUser(session.user);
+            }
+          } else if (expiresAt && expiresAt <= now) {
+            // Session is expired, try to refresh once
+            // Only refresh if session has required properties
+            if (session && session.refresh_token && session.access_token) {
+              supabase.auth.refreshSession(session).then(({ data: { session: refreshedSession }, error }) => {
+                if (!error && refreshedSession) {
+                  set({ session: refreshedSession });
+                  get().setUser(refreshedSession.user);
+                } else {
+                  // Refresh failed and session expired, clear user
+                  console.error('Session expired and refresh failed:', error);
+                  set({ 
+                    user: null, 
+                    isAuthenticated: false,
+                    session: null 
+                  });
+                }
+              }).catch((error) => {
+                console.error('Error refreshing expired session:', error);
+                set({ 
+                  user: null, 
+                  isAuthenticated: false,
+                  session: null 
+                });
+              });
+            } else {
+              // Session expired and doesn't have refresh token, clear user
+              console.error('Session expired and no refresh token available');
+              set({ 
+                user: null, 
+                isAuthenticated: false,
+                session: null 
+              });
+            }
+          } else {
+            // No expiry info, just set the user (session should be valid)
+            get().setUser(session.user);
           }
-          
-          get().setUser(session.user);
         } else {
           get().setUser(null);
         }

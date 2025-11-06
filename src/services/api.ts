@@ -38,28 +38,80 @@ api.interceptors.response.use(
       // Handle different error status codes
       switch (error.response.status) {
         case 401:
-          // Unauthorized - try to refresh session first
-          try {
-            const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+          // Unauthorized - try to refresh session first (but only once to prevent loops)
+          const config = error.config as any;
+          if (!config._retry) {
+            config._retry = true;
             
-            if (refreshError || !session) {
-              // Refresh failed, sign out
+            try {
+              // First check if we have a valid session
+              const { data: { session: currentSession } } = await supabase.auth.getSession();
+              
+              if (!currentSession) {
+                // No session at all, don't sign out (might be a public endpoint)
+                return Promise.reject(error);
+              }
+              
+              // Only try to refresh if session has required properties
+              if (!currentSession.refresh_token || !currentSession.access_token) {
+                // Session doesn't have required properties, check if it's expired
+                if (currentSession.expires_at && currentSession.expires_at < Math.floor(Date.now() / 1000)) {
+                  // Session is expired and can't be refreshed, sign out
+                  await supabase.auth.signOut();
+                  localStorage.removeItem('wholechild-auth');
+                  window.location.href = '/';
+                }
+                return Promise.reject(error);
+              }
+              
+              // Try to refresh the session
+              const { data: { session }, error: refreshError } = await supabase.auth.refreshSession(currentSession);
+              
+              if (refreshError || !session) {
+                // Refresh failed - check if session is actually expired
+                const { data: { session: checkSession } } = await supabase.auth.getSession();
+                
+                if (!checkSession || (checkSession.expires_at && checkSession.expires_at < Math.floor(Date.now() / 1000))) {
+                  // Session is truly invalid, sign out
+                  await supabase.auth.signOut();
+                  localStorage.removeItem('wholechild-auth');
+                  window.location.href = '/';
+                }
+                // If session still exists, don't sign out - might be a temporary issue
+                return Promise.reject(error);
+              } else {
+                // Retry the original request with new token
+                if (config && session?.access_token && config.headers) {
+                  config.headers.Authorization = `Bearer ${session.access_token}`;
+                  return api.request(config);
+                }
+              }
+            } catch (refreshErr) {
+              // On error, check if session still exists before signing out
+              try {
+                const { data: { session: checkSession } } = await supabase.auth.getSession();
+                if (!checkSession) {
+                  // No session, sign out
+                  await supabase.auth.signOut();
+                  localStorage.removeItem('wholechild-auth');
+                  window.location.href = '/';
+                }
+              } catch (checkErr) {
+                // Can't check session, but don't sign out - might be a network issue
+                console.error('Error checking session:', checkErr);
+              }
+              return Promise.reject(error);
+            }
+          } else {
+            // Already retried - check if session is still valid before signing out
+            const { data: { session: finalCheck } } = await supabase.auth.getSession();
+            if (!finalCheck || (finalCheck.expires_at && finalCheck.expires_at < Math.floor(Date.now() / 1000))) {
+              // Session is truly invalid, sign out
               await supabase.auth.signOut();
               localStorage.removeItem('wholechild-auth');
               window.location.href = '/';
-            } else {
-              // Retry the original request with new token
-              const config = error.config;
-              if (config && session?.access_token && config.headers) {
-                config.headers.Authorization = `Bearer ${session.access_token}`;
-                return api.request(config);
-              }
             }
-          } catch (refreshErr) {
-            // Refresh failed, sign out
-            await supabase.auth.signOut();
-            localStorage.removeItem('wholechild-auth');
-            window.location.href = '/';
+            return Promise.reject(error);
           }
           break;
         case 403:

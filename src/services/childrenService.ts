@@ -46,27 +46,48 @@ export interface AchievementData {
 
 // Helper function to get current user ID
 const getUserId = async (): Promise<string> => {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session?.user) {
-    throw new Error('Not authenticated');
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Error getting session:', error);
+      throw new Error('Authentication error: ' + error.message);
+    }
+    if (!session?.user) {
+      throw new Error('Not authenticated');
+    }
+    return session.user.id;
+  } catch (error: any) {
+    console.error('Error in getUserId:', error);
+    throw new Error('Authentication failed: ' + (error.message || 'Unknown error'));
   }
-  return session.user.id;
 };
 
 // Helper function to ensure user exists in users table
 const ensureUserExists = async (userId: string): Promise<void> => {
-  // Check if user exists in users table
-  const { data: existingUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('id', userId)
-    .single();
+  try {
+    // Check if user exists in users table - use maybeSingle() to avoid 406 errors
+    const { data: existingUser, error: selectError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
 
-  if (!existingUser) {
+    // If selectError is not a "not found" error, handle it
+    if (selectError && selectError.code !== 'PGRST116') {
+      console.error('Error checking user existence:', selectError);
+      // Continue anyway - might be a temporary issue
+    }
+
+    if (existingUser) {
+      // User exists, we're done
+      return;
+    }
+
     // User doesn't exist in users table, create them
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: { user: authUser }, error: getUserError } = await supabase.auth.getUser();
     
-    if (!authUser) {
+    if (getUserError || !authUser) {
+      console.error('Error getting authenticated user:', getUserError);
       throw new Error('Cannot find authenticated user');
     }
 
@@ -77,26 +98,45 @@ const ensureUserExists = async (userId: string): Promise<void> => {
     const role = (userMetadata.role as 'parent' | 'educator' | 'therapist') || 'parent';
 
     // Insert user into users table
+    // Use a dummy password hash since the schema requires NOT NULL (migration 004 may not be applied)
+    // This is a valid bcrypt hash format for a dummy password (not used for OAuth users)
+    const dummyPasswordHash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'; // bcrypt hash of "dummy_oauth_password"
+    
     const { error: insertError } = await supabase
       .from('users')
       .insert({
         id: userId,
         name,
-        email,
+        email: email.toLowerCase(),
         avatar: avatar || '',
         role,
-        password: null // Password is optional for OAuth users
+        password: dummyPasswordHash // Dummy hash for OAuth users (password not used for authentication)
       });
 
     if (insertError) {
       // If insert fails due to conflict (user was created between check and insert), that's okay
       // Postgres error code 23505 is unique_violation
-      if (!insertError.message.includes('duplicate') && insertError.code !== '23505') {
+      // Also check for duplicate key error messages
+      if (insertError.code !== '23505' && 
+          !insertError.message?.includes('duplicate') && 
+          !insertError.message?.includes('already exists') &&
+          !insertError.message?.includes('unique constraint')) {
+        // Only throw if it's not a conflict/duplicate error
+        console.error('Failed to create user record:', insertError);
         throw new Error(`Failed to create user record: ${insertError.message}`);
       }
       // If it's a duplicate/conflict error, that means the user was created by the trigger
-      // between our check and insert, which is fine - we can continue
+      // or another process between our check and insert, which is fine - we can continue
     }
+  } catch (error: any) {
+    // If it's a conflict error, that's fine - user exists now
+    if (error.message?.includes('duplicate') || 
+        error.message?.includes('already exists') ||
+        error.message?.includes('unique constraint')) {
+      return; // User exists, continue
+    }
+    // Re-throw other errors
+    throw error;
   }
 };
 
