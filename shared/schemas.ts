@@ -35,7 +35,14 @@ export const AdvancedOptionsSchema = z.object({
   seasonalThemes: z.array(z.string()).optional(),
   technologyIntegration: z.string().optional(),
   assessmentType: z.string().optional(),
-  budgetRange: z.string().optional()
+  budgetRange: z.string().optional(),
+  parentInvolvement: z.string().optional(),
+  groupSize: z.string().optional(),
+  difficultyLevel: z.string().optional(),
+  timeOfDay: z.string().optional(),
+  weatherConsiderations: z.string().optional(),
+  budgetConstraint: z.string().optional(),
+  safetyLevel: z.string().optional()
 }).optional();
 
 // AI Generation Request Schema
