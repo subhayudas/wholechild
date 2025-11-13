@@ -43,6 +43,8 @@ export interface Activity {
     extensionIdeas: string[];
     troubleshooting: string[];
   };
+  isAIGenerated?: boolean;
+  isFavorite?: boolean;
 }
 
 interface ActivityState {
@@ -64,37 +66,45 @@ interface ActivityState {
   getAIGeneratedActivities: () => Activity[];
 }
 
-// Helper function to convert MongoDB document to Activity format
+// Helper function to convert database activity to Activity format
+// Note: activitiesService now handles transformation, but keeping this for backward compatibility
 const mapActivityFromDB = (dbActivity: any): Activity => {
+  // If already transformed by activitiesService, return as is
+  if (dbActivity.ageRange && !dbActivity.age_range) {
+    return dbActivity;
+  }
+  
   return {
     id: dbActivity._id || dbActivity.id,
     title: dbActivity.title,
     description: dbActivity.description,
     methodologies: dbActivity.methodologies || [],
-    ageRange: dbActivity.ageRange || [3, 6],
+    ageRange: dbActivity.ageRange || dbActivity.age_range || [3, 6],
     duration: dbActivity.duration || 30,
     materials: dbActivity.materials || [],
     instructions: dbActivity.instructions || [],
-    learningObjectives: dbActivity.learningObjectives || [],
-    developmentalAreas: dbActivity.developmentalAreas || [],
-    speechTargets: dbActivity.speechTargets || [],
-    otTargets: dbActivity.otTargets || [],
+    learningObjectives: dbActivity.learningObjectives || dbActivity.learning_objectives || [],
+    developmentalAreas: dbActivity.developmentalAreas || dbActivity.developmental_areas || [],
+    speechTargets: dbActivity.speechTargets || dbActivity.speech_targets || [],
+    otTargets: dbActivity.otTargets || dbActivity.ot_targets || [],
     difficulty: dbActivity.difficulty || 3,
     category: dbActivity.category || '',
     tags: dbActivity.tags || [],
     media: dbActivity.media || { images: [], videos: [], audio: [] },
     adaptations: dbActivity.adaptations || { sensory: [], motor: [], cognitive: [] },
     assessment: dbActivity.assessment || { observationPoints: [], milestones: [] },
-    createdBy: dbActivity.createdBy || '',
+    createdBy: dbActivity.createdBy || dbActivity.created_by || '',
     rating: dbActivity.rating || 0,
     reviews: dbActivity.reviews || 0,
     price: dbActivity.price,
-    parentGuidance: dbActivity.parentGuidance || {
+    parentGuidance: dbActivity.parentGuidance || dbActivity.parent_guidance || {
       setupTips: [],
       encouragementPhrases: [],
       extensionIdeas: [],
       troubleshooting: []
-    }
+    },
+    isAIGenerated: dbActivity.isAIGenerated || dbActivity.is_ai_generated || false,
+    isFavorite: dbActivity.isFavorite || dbActivity.is_favorite || false
   };
 };
 
