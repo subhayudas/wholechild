@@ -30,8 +30,7 @@ import {
   User,
   CheckCircle,
   Wand2,
-  RefreshCw,
-  Sliders
+  RefreshCw
 } from 'lucide-react';
 import { useActivityStore, Activity } from '../store/activityStore';
 import { useChildStore } from '../store/childStore';
@@ -187,26 +186,6 @@ const ActivityBuilder = () => {
             </div>
             
             <div className="flex items-center gap-3">
-              <motion.button
-                onClick={() => window.location.href = '/admin/ai-generator'}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Wand2 className="w-5 h-5" />
-                AI Generator
-              </motion.button>
-              
-              <motion.button
-                onClick={() => window.location.href = '/admin/ai-pro-generator'}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Sliders className="w-5 h-5" />
-                AI Pro
-              </motion.button>
-
               <motion.button
                 onClick={() => setShowCreator(true)}
                 className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
@@ -498,32 +477,20 @@ const ActivityBuilder = () => {
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No activities found</h3>
                 <p className="text-gray-600 mb-6">
                   {showAIOnly 
-                    ? "You haven't generated any AI activities yet. Try the AI Generator!"
+                    ? "You haven't generated any AI activities yet."
                     : "Try adjusting your search terms or filters, or create a new activity."
                   }
                 </p>
                 <div className="flex gap-3 justify-center">
-                  {showAIOnly ? (
-                    <motion.button
-                      onClick={() => window.location.href = '/admin/ai-generator'}
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Wand2 className="w-5 h-5" />
-                      Generate AI Activity
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      onClick={() => setShowCreator(true)}
-                      className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Plus className="w-5 h-5" />
-                      Create Your First Activity
-                    </motion.button>
-                  )}
+                  <motion.button
+                    onClick={() => setShowCreator(true)}
+                    className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Plus className="w-5 h-5" />
+                    {showAIOnly ? 'Create Activity' : 'Create Your First Activity'}
+                  </motion.button>
                 </div>
               </motion.div>
             )}
