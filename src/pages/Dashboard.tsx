@@ -1000,24 +1000,6 @@ const Dashboard = () => {
                 </Link>
               </motion.div>
               
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link
-                  to="/therapy"
-                  className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-all duration-200 rounded-lg group"
-                >
-                  <motion.div 
-                    className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors"
-                    whileHover={{ rotate: 5 }}
-                  >
-                    <Target className="w-5 h-5 text-gray-600 group-hover:text-purple-600 transition-colors" />
-                  </motion.div>
-                  <div>
-                    <p className="font-medium text-gray-900 group-hover:text-purple-900 transition-colors">Therapy Session</p>
-                    <p className="text-sm text-gray-500">Start session</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                </Link>
-              </motion.div>
             </div>
           </motion.div>
 

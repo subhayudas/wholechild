@@ -6,7 +6,6 @@ import Dashboard from './pages/Dashboard';
 import ActivityBuilder from './pages/ActivityBuilder';
 import ChildProfile from './pages/ChildProfile';
 import LearningStories from './pages/LearningStories';
-import TherapyCenter from './pages/TherapyCenter';
 import ProgressAnalytics from './pages/ProgressAnalytics';
 import AIActivityGenerator from './pages/AIActivityGenerator';
 import AIProGenerator from './pages/AIProGenerator';
@@ -116,7 +115,6 @@ const App = () => {
               <Route path="/child-profile" element={<ChildProfile />} />
               <Route path="/activity-builder" element={<ActivityBuilder />} />
               <Route path="/learning-stories" element={<LearningStories />} />
-              <Route path="/therapy" element={<TherapyCenter />} />
               <Route path="/analytics" element={<ProgressAnalytics />} />
               <Route path="/admin/ai-generator" element={<AIActivityGenerator />} />
               <Route path="/admin/ai-pro-generator" element={<AIProGenerator />} />

@@ -8,7 +8,6 @@ import authRoutes from './routes/auth';
 import childrenRoutes from './routes/children';
 import activitiesRoutes from './routes/activities';
 import learningStoriesRoutes from './routes/learningStories';
-import therapyRoutes from './routes/therapy';
 import logger from './utils/logger';
 import { requestLoggingMiddleware, errorLoggingMiddleware } from './middleware/requestLogger';
 import { initSupabase, checkSupabaseHealth } from './utils/supabase';
@@ -49,7 +48,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/children', childrenRoutes);
 app.use('/api/activities', activitiesRoutes);
 app.use('/api/learning-stories', learningStoriesRoutes);
-app.use('/api/therapy', therapyRoutes);
 
 // Health check routes
 app.get('/', (req: Request, res: Response) => {

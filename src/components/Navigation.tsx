@@ -6,7 +6,6 @@ import {
   User, 
   Blocks, 
   BookOpen, 
-  Stethoscope, 
   BarChart3, 
   Sparkles,
   LogOut,
@@ -24,7 +23,6 @@ const Navigation = () => {
     { path: '/child-profile', icon: User, label: 'Child Profile' },
     { path: '/activity-builder', icon: Blocks, label: 'Activities' },
     { path: '/learning-stories', icon: BookOpen, label: 'Learning Stories' },
-    { path: '/therapy', icon: Stethoscope, label: 'Therapy Center' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
     { path: '/admin/ai-generator', icon: Wand2, label: 'AI Generator' },
     { path: '/admin/ai-pro-generator', icon: Sliders, label: 'AI Pro Generator' }
