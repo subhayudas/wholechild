@@ -1,11 +1,13 @@
 import { create } from 'zustand';
+import { learningStoriesService, CreateStoryData } from '../services/learningStoriesService';
+import toast from 'react-hot-toast';
 
 export interface LearningStory {
   id: string;
   childId: string;
   title: string;
   description: string;
-  date: Date;
+  date: Date | string;
   activityId?: string;
   media: {
     photos: string[];
@@ -28,88 +30,159 @@ export interface LearningStory {
 
 interface LearningStoryState {
   stories: LearningStory[];
-  addStory: (story: Omit<LearningStory, 'id'>) => void;
-  updateStory: (id: string, updates: Partial<LearningStory>) => void;
-  deleteStory: (id: string) => void;
+  isLoading: boolean;
+  error: string | null;
+  fetchStories: (childId: string) => Promise<void>;
+  fetchAllStories: (childIds: string[]) => Promise<void>;
+  addStory: (story: CreateStoryData, files?: {
+    photos?: File[];
+    videos?: File[];
+    audio?: File[];
+  }) => Promise<void>;
+  updateStory: (id: string, updates: Partial<LearningStory>, files?: {
+    photos?: File[];
+    videos?: File[];
+    audio?: File[];
+  }) => Promise<void>;
+  deleteStory: (id: string) => Promise<void>;
   getStoriesForChild: (childId: string) => LearningStory[];
-  addReaction: (storyId: string, type: 'hearts' | 'celebrations' | 'insights') => void;
+  addReaction: (storyId: string, type: 'hearts' | 'celebrations' | 'insights') => Promise<void>;
 }
 
+// Helper to transform date strings to Date objects
+const transformStory = (story: any): LearningStory => {
+  return {
+    ...story,
+    date: story.date ? (typeof story.date === 'string' ? new Date(story.date) : story.date) : new Date(),
+  };
+};
+
 export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
-  stories: [
-    {
-      id: '1',
-      childId: '1',
-      title: 'Emma\'s First Rainbow Sort',
-      description: 'Emma showed incredible focus today while sorting colored rice. She naturally began creating patterns and even invented her own sorting game!',
-      date: new Date('2025-01-15'),
-      activityId: '1',
-      media: {
-        photos: [
-          'https://images.pexels.com/photos/8613089/pexels-photo-8613089.jpeg',
-          'https://images.pexels.com/photos/8613264/pexels-photo-8613264.jpeg'
-        ],
-        videos: [],
-        audio: []
-      },
-      observations: [
-        'Used pincer grasp consistently throughout activity',
-        'Self-corrected when colors were mixed',
-        'Showed sustained attention for 25 minutes',
-        'Began creating AB patterns spontaneously'
-      ],
-      milestones: [
-        'Sorts 7 colors independently',
-        'Uses descriptive color language',
-        'Shows mathematical thinking through patterning'
-      ],
-      nextSteps: [
-        'Introduce more complex patterns',
-        'Add counting to sorting activities',
-        'Explore color mixing with paint'
-      ],
-      developmentalAreas: ['Cognitive', 'Physical', 'Language'],
-      methodologyTags: ['Montessori', 'Reggio'],
-      sharedWith: ['grandparents', 'teacher'],
-      isPrivate: false,
-      reactions: {
-        hearts: 12,
-        celebrations: 8,
-        insights: 3
-      }
+  stories: [],
+  isLoading: false,
+  error: null,
+  
+  fetchStories: async (childId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const stories = await learningStoriesService.getByChildId(childId);
+      const transformedStories = stories.map(transformStory);
+      set((state) => {
+        // Replace stories for this child, keep others
+        const otherStories = state.stories.filter(s => s.childId !== childId);
+        // Remove duplicates
+        const allStories = [...otherStories, ...transformedStories];
+        const uniqueStories = Array.from(
+          new Map(allStories.map(story => [story.id, story])).values()
+        );
+        return {
+          stories: uniqueStories,
+          isLoading: false
+        };
+      });
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch learning stories';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
     }
-  ],
-  
-  addStory: (story) => {
-    const newStory = { ...story, id: Date.now().toString() };
-    set((state) => ({ stories: [...state.stories, newStory] }));
   },
   
-  updateStory: (id, updates) => {
-    set((state) => ({
-      stories: state.stories.map(story => 
-        story.id === id ? { ...story, ...updates } : story
-      )
-    }));
+  fetchAllStories: async (childIds: string[]) => {
+    if (childIds.length === 0) {
+      set({ stories: [], isLoading: false });
+      return;
+    }
+    
+    set({ isLoading: true, error: null });
+    try {
+      const allPromises = childIds.map(id => learningStoriesService.getByChildId(id));
+      const results = await Promise.all(allPromises);
+      const allStories = results.flat().map(transformStory);
+      // Remove duplicates based on ID
+      const uniqueStories = Array.from(
+        new Map(allStories.map(story => [story.id, story])).values()
+      );
+      set({ stories: uniqueStories, isLoading: false });
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to fetch learning stories';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+    }
   },
   
-  deleteStory: (id) => {
-    set((state) => ({
-      stories: state.stories.filter(story => story.id !== id)
-    }));
+  addStory: async (story, files) => {
+    set({ isLoading: true, error: null });
+    try {
+      const newStory = await learningStoriesService.create(story, files);
+      const transformedStory = transformStory(newStory);
+      set((state) => ({
+        stories: [transformedStory, ...state.stories],
+        isLoading: false
+      }));
+      toast.success('Learning story created successfully!');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to create learning story';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+  
+  updateStory: async (id, updates, files) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updatedStory = await learningStoriesService.update(id, updates, files);
+      const transformedStory = transformStory(updatedStory);
+      set((state) => ({
+        stories: state.stories.map(story => 
+          story.id === id ? transformedStory : story
+        ),
+        isLoading: false
+      }));
+      toast.success('Learning story updated successfully!');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to update learning story';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
+  },
+  
+  deleteStory: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      await learningStoriesService.delete(id);
+      set((state) => ({
+        stories: state.stories.filter(story => story.id !== id),
+        isLoading: false
+      }));
+      toast.success('Learning story deleted successfully!');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to delete learning story';
+      set({ error: errorMessage, isLoading: false });
+      toast.error(errorMessage);
+      throw error;
+    }
   },
   
   getStoriesForChild: (childId) => {
     return get().stories.filter(story => story.childId === childId);
   },
   
-  addReaction: (storyId, type) => {
-    set((state) => ({
-      stories: state.stories.map(story => 
-        story.id === storyId 
-          ? { ...story, reactions: { ...story.reactions, [type]: story.reactions[type] + 1 } }
-          : story
-      )
-    }));
+  addReaction: async (storyId, type) => {
+    try {
+      const updatedStory = await learningStoriesService.addReaction(storyId, type);
+      const transformedStory = transformStory(updatedStory);
+      set((state) => ({
+        stories: state.stories.map(story => 
+          story.id === storyId ? transformedStory : story
+        )
+      }));
+      toast.success('Reaction added!');
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to add reaction';
+      toast.error(errorMessage);
+      throw error;
+    }
   }
 }));

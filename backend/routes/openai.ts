@@ -114,23 +114,36 @@ router.get('/test-openai-connection', async (req: Request, res: Response) => {
   
   try {
     logger.debug('Testing OpenAI connection');
+    
+    // Check if API key is configured
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
+      logger.warn('OpenAI API key is not configured');
+      return res.status(400).json({
+        connected: false,
+        error: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.'
+      });
+    }
+    
     const isConnected = await testOpenAIConnection();
     
     if (isConnected) {
       logger.debug('OpenAI connection test successful');
+      return res.json({
+        connected: true,
+        message: 'OpenAI connection successful'
+      });
     } else {
       logger.warn('OpenAI connection test failed');
+      return res.status(500).json({
+        connected: false,
+        error: 'OpenAI connection test failed. Please check your API key and internet connection.'
+      });
     }
-    
-    res.json({
-      connected: isConnected,
-      message: isConnected ? 'OpenAI connection successful' : 'OpenAI connection failed'
-    });
-  } catch (error) {
+  } catch (error: any) {
     logger.error({ error }, 'Error testing OpenAI connection');
     res.status(500).json({
       connected: false,
-      error: 'Failed to test OpenAI connection'
+      error: error?.message || 'Failed to test OpenAI connection'
     });
   }
 });

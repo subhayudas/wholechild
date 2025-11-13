@@ -53,9 +53,13 @@ const getUserId = async (): Promise<string> => {
       throw new Error('Authentication error: ' + error.message);
     }
     if (!session?.user) {
-      throw new Error('Not authenticated');
+      throw new Error('Not authenticated - please sign in');
     }
-    return session.user.id;
+    const userId = session.user.id;
+    if (!userId) {
+      throw new Error('User ID not found in session');
+    }
+    return userId;
   } catch (error: any) {
     console.error('Error in getUserId:', error);
     throw new Error('Authentication failed: ' + (error.message || 'Unknown error'));
@@ -72,15 +76,16 @@ const ensureUserExists = async (userId: string): Promise<void> => {
       .eq('id', userId)
       .maybeSingle();
 
-    // If selectError is not a "not found" error, handle it
-    if (selectError && selectError.code !== 'PGRST116') {
-      console.error('Error checking user existence:', selectError);
-      // Continue anyway - might be a temporary issue
+    // If user exists, we're done
+    if (existingUser) {
+      return;
     }
 
-    if (existingUser) {
-      // User exists, we're done
-      return;
+    // If selectError is not a "not found" error, it might be an RLS issue
+    // But we'll still try to create the user - if it already exists, that's fine
+    if (selectError && selectError.code !== 'PGRST116') {
+      console.warn('Error checking user existence (might be RLS issue):', selectError);
+      // Continue - we'll try to insert and handle conflicts
     }
 
     // User doesn't exist in users table, create them
@@ -97,36 +102,97 @@ const ensureUserExists = async (userId: string): Promise<void> => {
     const avatar = userMetadata.avatar_url || userMetadata.picture || '';
     const role = (userMetadata.role as 'parent' | 'educator' | 'therapist') || 'parent';
 
-    // Insert user into users table
-    // Use a dummy password hash since the schema requires NOT NULL (migration 004 may not be applied)
-    // This is a valid bcrypt hash format for a dummy password (not used for OAuth users)
-    const dummyPasswordHash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy'; // bcrypt hash of "dummy_oauth_password"
-    
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        name,
-        email: email.toLowerCase(),
-        avatar: avatar || '',
-        role,
-        password: dummyPasswordHash // Dummy hash for OAuth users (password not used for authentication)
-      });
+    // Try to insert user into users table
+    // First, try without password (if migration 004 is applied, password is nullable)
+    let insertData: any = {
+      id: userId,
+      name,
+      email: email.toLowerCase(),
+      avatar: avatar || '',
+      role
+    };
 
+    // Try inserting without password first (if migration 004 is applied, password is nullable)
+    let { data: insertData_result, error: insertError } = await supabase
+      .from('users')
+      .insert(insertData)
+      .select('id')
+      .single();
+
+    // Check if we got a 409 Conflict (user already exists)
+    // Supabase might return this as an error or as a response
     if (insertError) {
-      // If insert fails due to conflict (user was created between check and insert), that's okay
-      // Postgres error code 23505 is unique_violation
-      // Also check for duplicate key error messages
-      if (insertError.code !== '23505' && 
-          !insertError.message?.includes('duplicate') && 
-          !insertError.message?.includes('already exists') &&
-          !insertError.message?.includes('unique constraint')) {
-        // Only throw if it's not a conflict/duplicate error
-        console.error('Failed to create user record:', insertError);
-        throw new Error(`Failed to create user record: ${insertError.message}`);
+      // Log the full error for debugging
+      console.log('Insert error details:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        status: (insertError as any).status
+      });
+    }
+
+    // If that fails and it's because password is required, try with a dummy password
+    if (insertError && (insertError.message?.includes('password') || insertError.code === '23502' || insertError.message?.includes('null value'))) {
+      console.log('Password field is required, adding dummy password hash');
+      // Use a dummy password hash since the schema requires NOT NULL (migration 004 may not be applied)
+      // This is a valid bcrypt hash format for a dummy password (not used for OAuth users)
+      const dummyPasswordHash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+      insertData.password = dummyPasswordHash;
+      
+      const { data: retryData, error: retryError } = await supabase
+        .from('users')
+        .insert(insertData)
+        .select('id')
+        .single();
+      
+      insertError = retryError;
+      insertData_result = retryData;
+    }
+    
+    // Handle insert errors
+    if (insertError) {
+      // Check for conflict/duplicate errors - these mean user already exists
+      // Supabase might return 409 in different ways
+      const errorStatus = (insertError as any).status || (insertError as any).statusCode;
+      const errorCode = insertError.code || '';
+      const errorMessage = insertError.message || '';
+      
+      const isConflictError = 
+        errorCode === '23505' ||  // PostgreSQL unique_violation
+        errorCode === '409' ||     // HTTP Conflict as string
+        errorStatus === 409 ||     // HTTP status code
+        errorMessage.includes('duplicate') || 
+        errorMessage.includes('already exists') ||
+        errorMessage.includes('unique constraint') ||
+        errorMessage.includes('Conflict') ||
+        errorMessage.toLowerCase().includes('conflict') ||
+        errorMessage.includes('violates unique constraint');
+      
+      if (isConflictError) {
+        // User already exists - this is fine, we can continue
+        console.log('User already exists in database (409/conflict error - this is fine)');
+        return; // Exit early - user exists, no need to verify
       }
-      // If it's a duplicate/conflict error, that means the user was created by the trigger
-      // or another process between our check and insert, which is fine - we can continue
+      
+      // If insert fails due to RLS policy, the policy might not exist yet
+      if (errorCode === '42501' || errorMessage.includes('permission denied') || errorMessage.includes('policy')) {
+        console.error('RLS policy error - user insert policy may not exist. Error:', insertError);
+        throw new Error('Permission denied: User insert policy not configured. Please run migration 005_add_user_insert_policy.sql in your Supabase database.');
+      }
+      
+      // Other errors - throw them
+      console.error('Failed to create user record:', insertError);
+      throw new Error(`Failed to create user record: ${errorMessage || errorCode || errorStatus || 'Unknown error'}`);
+    }
+
+    // If insert succeeded (no error), the user was created
+    // We don't need to verify - if insert succeeded, user exists
+    // Verification can fail due to RLS policies even if user exists
+    if (insertData_result) {
+      console.log('User record created successfully');
+    } else {
+      console.log('User insert completed (no data returned, but no error)');
     }
   } catch (error: any) {
     // If it's a conflict error, that's fine - user exists now
@@ -136,6 +202,7 @@ const ensureUserExists = async (userId: string): Promise<void> => {
       return; // User exists, continue
     }
     // Re-throw other errors
+    console.error('Error in ensureUserExists:', error);
     throw error;
   }
 };

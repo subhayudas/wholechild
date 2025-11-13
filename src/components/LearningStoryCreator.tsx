@@ -21,7 +21,8 @@ import {
   Lightbulb,
   CheckCircle,
   Calendar,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { LearningStory, useLearningStoryStore } from '../store/learningStoryStore';
 import { useChildStore } from '../store/childStore';
@@ -41,39 +42,37 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
   const [currentStep, setCurrentStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Track files separately from URLs
+  const [fileObjects, setFileObjects] = useState<{
+    photos: File[];
+    videos: File[];
+    audio: File[];
+  }>({
+    photos: [],
+    videos: [],
+    audio: []
+  });
   
   const [formData, setFormData] = useState({
-    childId: activeChild?.id || '',
-    title: '',
-    description: '',
-    date: new Date(),
-    activityId: '',
+    childId: story?.childId || activeChild?.id || '',
+    title: story?.title || '',
+    description: story?.description || '',
+    date: story?.date ? (typeof story.date === 'string' ? new Date(story.date) : story.date) : new Date(),
+    activityId: story?.activityId || '',
     media: {
-      photos: [] as string[],
-      videos: [] as string[],
-      audio: [] as string[]
+      photos: story?.media?.photos || [] as string[],
+      videos: story?.media?.videos || [] as string[],
+      audio: story?.media?.audio || [] as string[]
     },
-    observations: [''],
-    milestones: [''],
-    nextSteps: [''],
-    developmentalAreas: [] as string[],
-    methodologyTags: [] as string[],
-    sharedWith: [] as string[],
-    isPrivate: false,
-    learningMoments: [
-      {
-        timestamp: '',
-        description: '',
-        significance: '',
-        methodology: ''
-      }
-    ],
-    reflections: {
-      childVoice: '',
-      parentReflection: '',
-      educatorInsights: '',
-      futureGoals: ''
-    }
+    observations: story?.observations && story.observations.length > 0 ? story.observations : [''],
+    milestones: story?.milestones && story.milestones.length > 0 ? story.milestones : [''],
+    nextSteps: story?.nextSteps && story.nextSteps.length > 0 ? story.nextSteps : [''],
+    developmentalAreas: story?.developmentalAreas || [] as string[],
+    methodologyTags: story?.methodologyTags || [] as string[],
+    sharedWith: story?.sharedWith || [] as string[],
+    isPrivate: story?.isPrivate || false
   });
 
   const steps = [
@@ -81,7 +80,7 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
     { title: 'Media Capture', icon: Camera },
     { title: 'Observations', icon: Eye },
     { title: 'Learning Analysis', icon: Brain },
-    { title: 'Reflections', icon: Heart },
+    { title: 'Additional Notes', icon: Heart },
     { title: 'Share & Save', icon: Share2 }
   ];
 
@@ -171,20 +170,50 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photos' | 'videos') => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'photos' | 'videos' | 'audio') => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Store File objects for upload
+    setFileObjects(prev => ({
+      ...prev,
+      [type]: [...prev[type], ...files]
+    }));
+    
+    // Create preview URLs
     files.forEach(file => {
       const url = URL.createObjectURL(file);
       updateNestedData('media', type, [...formData.media[type], url]);
     });
+    
+    // Reset input
+    if (e.target) {
+      e.target.value = '';
+    }
   };
 
-  const removeMedia = (type: 'photos' | 'videos', index: number) => {
+  const removeMedia = (type: 'photos' | 'videos' | 'audio', index: number) => {
+    // Remove from preview URLs
     const newMedia = formData.media[type].filter((_, i) => i !== index);
     updateNestedData('media', type, newMedia);
+    
+    // Remove from file objects if it's a new file (URL starts with blob:)
+    const urlToRemove = formData.media[type][index];
+    if (urlToRemove && urlToRemove.startsWith('blob:')) {
+      setFileObjects(prev => {
+        const newFiles = [...prev[type]];
+        // Find the index in fileObjects by matching the blob URL creation order
+        // This is approximate - in a real app you'd track this better
+        const blobIndex = formData.media[type].slice(0, index).filter(url => url.startsWith('blob:')).length;
+        if (blobIndex < newFiles.length) {
+          newFiles.splice(blobIndex, 1);
+        }
+        return { ...prev, [type]: newFiles };
+      });
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title.trim()) {
       toast.error('Please enter a story title');
       return;
@@ -194,23 +223,49 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
       return;
     }
 
-    const storyData = {
-      ...formData,
-      observations: formData.observations.filter(o => o.trim()),
-      milestones: formData.milestones.filter(m => m.trim()),
-      nextSteps: formData.nextSteps.filter(n => n.trim()),
-      reactions: { hearts: 0, celebrations: 0, insights: 0 }
-    };
+    setIsSaving(true);
+    
+    try {
+      const storyData = {
+        childId: formData.childId,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        date: formData.date,
+        activityId: formData.activityId || undefined,
+        media: {
+          photos: formData.media.photos.filter(url => !url.startsWith('blob:')), // Keep only existing URLs
+          videos: formData.media.videos.filter(url => !url.startsWith('blob:')),
+          audio: formData.media.audio.filter(url => !url.startsWith('blob:'))
+        },
+        observations: formData.observations.filter(o => o.trim()),
+        milestones: formData.milestones.filter(m => m.trim()),
+        nextSteps: formData.nextSteps.filter(n => n.trim()),
+        developmentalAreas: formData.developmentalAreas,
+        methodologyTags: formData.methodologyTags,
+        sharedWith: formData.sharedWith,
+        isPrivate: formData.isPrivate
+      };
 
-    if (story) {
-      updateStory(story.id, storyData);
-      toast.success('Learning story updated successfully!');
-    } else {
-      addStory(storyData);
-      toast.success('Learning story created successfully!');
+      // Prepare files for upload
+      const files = {
+        photos: fileObjects.photos.length > 0 ? fileObjects.photos : undefined,
+        videos: fileObjects.videos.length > 0 ? fileObjects.videos : undefined,
+        audio: fileObjects.audio.length > 0 ? fileObjects.audio : undefined
+      };
+
+      if (story) {
+        await updateStory(story.id, storyData, files);
+      } else {
+        await addStory(storyData, files);
+      }
+
+      onSave();
+    } catch (error) {
+      // Error already handled in store
+      setIsSaving(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    onSave();
   };
 
   const renderStep = () => {
@@ -261,7 +316,9 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
               <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
               <input
                 type="date"
-                value={formData.date.toISOString().split('T')[0]}
+                value={formData.date instanceof Date 
+                  ? formData.date.toISOString().split('T')[0] 
+                  : new Date(formData.date).toISOString().split('T')[0]}
                 onChange={(e) => updateFormData('date', new Date(e.target.value))}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -546,53 +603,20 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
         return (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Reflections & Insights</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Notes</h3>
               <p className="text-gray-600 mb-6">
-                Add deeper reflections and insights about this learning moment.
+                Add any additional notes or reflections about this learning moment.
               </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Child's Voice</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
               <textarea
-                value={formData.reflections.childVoice}
-                onChange={(e) => updateNestedData('reflections', 'childVoice', e.target.value)}
-                rows={3}
+                value={formData.description}
+                onChange={(e) => updateFormData('description', e.target.value)}
+                rows={6}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What did the child say? Include quotes or expressions..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Parent Reflection</label>
-              <textarea
-                value={formData.reflections.parentReflection}
-                onChange={(e) => updateNestedData('reflections', 'parentReflection', e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What are your thoughts as a parent about this moment?"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Educator Insights</label>
-              <textarea
-                value={formData.reflections.educatorInsights}
-                onChange={(e) => updateNestedData('reflections', 'educatorInsights', e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Professional insights about the learning that occurred..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Future Goals</label>
-              <textarea
-                value={formData.reflections.futureGoals}
-                onChange={(e) => updateNestedData('reflections', 'futureGoals', e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="What goals or directions does this suggest for future learning?"
+                placeholder="Add any additional notes, reflections, or insights about this learning moment..."
               />
             </div>
           </div>
@@ -745,12 +769,22 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
             {currentStep === steps.length - 1 ? (
               <motion.button
                 onClick={handleSave}
-                className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-8 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                disabled={isSaving}
+                className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-8 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: isSaving ? 1 : 1.02 }}
+                whileTap={{ scale: isSaving ? 1 : 0.98 }}
               >
-                <Save className="w-4 h-4" />
-                Save Story
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Story
+                  </>
+                )}
               </motion.button>
             ) : (
               <button

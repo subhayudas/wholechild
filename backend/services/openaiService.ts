@@ -2,8 +2,12 @@ import { OpenAI } from 'openai';
 import { AIGenerationRequest, AIGeneratedActivity, QualityAnalysis, VariationType } from '../../shared/schemas';
 
 // Initialize OpenAI client
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('WARNING: OPENAI_API_KEY is not set in environment variables');
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 const buildPrompt = (request: AIGenerationRequest) => {
@@ -362,6 +366,12 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
 
 // Test function to check if OpenAI is properly configured
 export const testOpenAIConnection = async (): Promise<boolean> => {
+  // Check if API key is configured
+  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.trim() === '') {
+    console.error('OpenAI API key is not configured');
+    return false;
+  }
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -369,9 +379,26 @@ export const testOpenAIConnection = async (): Promise<boolean> => {
       max_tokens: 20
     });
 
-    return completion.choices[0]?.message?.content?.includes('successful') || false;
-  } catch (error) {
-    console.error('OpenAI connection test failed:', error);
+    const response = completion.choices[0]?.message?.content || '';
+    const isSuccessful = response.toLowerCase().includes('successful');
+    
+    if (!isSuccessful) {
+      console.warn('OpenAI responded but did not include expected success message:', response);
+    }
+    
+    return isSuccessful;
+  } catch (error: any) {
+    console.error('OpenAI connection test failed:', error?.message || error);
+    
+    // Provide more specific error messages
+    if (error?.status === 401) {
+      console.error('OpenAI API key is invalid or unauthorized');
+    } else if (error?.status === 429) {
+      console.error('OpenAI API rate limit exceeded');
+    } else if (error?.code === 'ENOTFOUND' || error?.code === 'ECONNREFUSED') {
+      console.error('Cannot connect to OpenAI API - check your internet connection');
+    }
+    
     return false;
   }
 };

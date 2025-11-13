@@ -45,7 +45,7 @@ export const learningStoriesService = {
     // Append all story data as JSON string
     const dataToSend = {
       ...storyData,
-      date: storyData.date || new Date(),
+      date: storyData.date ? (storyData.date instanceof Date ? storyData.date.toISOString() : storyData.date) : new Date().toISOString(),
     };
     formData.append('data', JSON.stringify(dataToSend));
 
@@ -70,7 +70,11 @@ export const learningStoriesService = {
       return response.data;
     } else {
       // Send as JSON if no files
-      const response = await api.post('/learning-stories', dataToSend);
+      const jsonData = {
+        ...storyData,
+        date: storyData.date ? (storyData.date instanceof Date ? storyData.date.toISOString() : storyData.date) : new Date().toISOString(),
+      };
+      const response = await api.post('/learning-stories', jsonData);
       return response.data;
     }
   },

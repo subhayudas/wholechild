@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -18,24 +18,49 @@ import {
   Eye,
   Share2,
   Download,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
-import { useLearningStoryStore } from '../store/learningStoryStore';
+import { useLearningStoryStore, LearningStory } from '../store/learningStoryStore';
 import { useChildStore } from '../store/childStore';
 import LearningStoryCreator from '../components/LearningStoryCreator';
 import LearningStoryCard from '../components/LearningStoryCard';
 import toast from 'react-hot-toast';
 
 const LearningStories = () => {
-  const { stories, addReaction, deleteStory } = useLearningStoryStore();
-  const { children, activeChild } = useChildStore();
+  const { stories, isLoading, fetchAllStories, addReaction, deleteStory } = useLearningStoryStore();
+  const { children, activeChild, fetchChildren } = useChildStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedChild, setSelectedChild] = useState('all');
   const [selectedTimeframe, setSelectedTimeframe] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreator, setShowCreator] = useState(false);
-  const [editingStory, setEditingStory] = useState(null);
+  const [editingStory, setEditingStory] = useState<LearningStory | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch children and stories on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (children.length === 0) {
+        await fetchChildren();
+      }
+      
+      if (children.length > 0) {
+        const childIds = children.map(c => c.id);
+        await fetchAllStories(childIds);
+      }
+    };
+    
+    loadData();
+  }, []);
+
+  // Refetch stories when children change
+  useEffect(() => {
+    if (children.length > 0) {
+      const childIds = children.map(c => c.id);
+      fetchAllStories(childIds);
+    }
+  }, [children.length]);
 
   // Filter stories
   const filteredStories = stories.filter(story => {
@@ -65,26 +90,32 @@ const LearningStories = () => {
     setShowCreator(true);
   };
 
-  const handleEditStory = (story: any) => {
+  const handleEditStory = (story: LearningStory) => {
     setEditingStory(story);
     setShowCreator(true);
   };
 
-  const handleDeleteStory = (storyId: string) => {
+  const handleDeleteStory = async (storyId: string) => {
     if (window.confirm('Are you sure you want to delete this learning story?')) {
-      deleteStory(storyId);
-      toast.success('Learning story deleted successfully');
+      try {
+        await deleteStory(storyId);
+      } catch (error) {
+        // Error already handled in store
+      }
     }
   };
 
-  const handleViewStory = (story: any) => {
+  const handleViewStory = (story: LearningStory) => {
     // In a real app, this would open a detailed view modal
     toast.success(`Viewing "${story.title}"`);
   };
 
-  const handleReaction = (storyId: string, type: 'hearts' | 'celebrations' | 'insights') => {
-    addReaction(storyId, type);
-    toast.success('Reaction added!');
+  const handleReaction = async (storyId: string, type: 'hearts' | 'celebrations' | 'insights') => {
+    try {
+      await addReaction(storyId, type);
+    } catch (error) {
+      // Error already handled in store
+    }
   };
 
   const getStoryStats = () => {
@@ -249,7 +280,12 @@ const LearningStories = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.3 }}
         >
-          {filteredStories.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+              <span className="ml-3 text-gray-600">Loading learning stories...</span>
+            </div>
+          ) : filteredStories.length > 0 ? (
             <div className={`grid gap-6 ${
               viewMode === 'grid' 
                 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' 

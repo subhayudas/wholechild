@@ -129,9 +129,15 @@ const AIProGenerator = () => {
       try {
         const connected = await testOpenAIConnection();
         setOpenAIConnected(connected);
-      } catch (error) {
+        if (connected) {
+          toast.success('OpenAI connected successfully!');
+        } else {
+          toast.error('OpenAI connection unavailable. Please check your API key in .env.local file.');
+        }
+      } catch (error: any) {
         console.error('Failed to test OpenAI connection:', error);
         setOpenAIConnected(false);
+        toast.error('OpenAI connection unavailable. Please check your API key and internet connection.');
       }
     };
     testConnection();

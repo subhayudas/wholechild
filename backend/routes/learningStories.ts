@@ -94,50 +94,63 @@ router.post('/', auth, upload.fields([
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     
-    // Build media URLs
+    // Parse JSON data from FormData if present, otherwise use req.body directly
+    let bodyData: any = req.body;
+    if (req.body.data && typeof req.body.data === 'string') {
+      try {
+        bodyData = JSON.parse(req.body.data);
+      } catch (e) {
+        logger.warn({ err: e }, 'Failed to parse JSON data from FormData');
+      }
+    }
+    
+    // Build media URLs from uploaded files
     const media = {
       photos: [] as string[],
       videos: [] as string[],
       audio: [] as string[]
     };
 
-    if (files.photos) {
+    if (files?.photos) {
       media.photos = files.photos.map(file => `/uploads/${file.filename}`);
     }
-    if (files.videos) {
+    if (files?.videos) {
       media.videos = files.videos.map(file => `/uploads/${file.filename}`);
     }
-    if (files.audio) {
+    if (files?.audio) {
       media.audio = files.audio.map(file => `/uploads/${file.filename}`);
     }
 
     // Merge with existing media if provided in body
     const storyData = {
-      ...req.body,
       userId: req.user?.id,
-      childId: req.body.childId,
+      childId: bodyData.childId,
+      title: bodyData.title,
+      description: bodyData.description,
+      date: bodyData.date || new Date().toISOString(),
+      activityId: bodyData.activityId || null,
       media: {
-        photos: [...media.photos, ...(req.body.media?.photos || [])],
-        videos: [...media.videos, ...(req.body.media?.videos || [])],
-        audio: [...media.audio, ...(req.body.media?.audio || [])]
+        photos: [...media.photos, ...(bodyData.media?.photos || [])],
+        videos: [...media.videos, ...(bodyData.media?.videos || [])],
+        audio: [...media.audio, ...(bodyData.media?.audio || [])]
       },
-      observations: req.body.observations || [],
-      milestones: req.body.milestones || [],
-      nextSteps: req.body.nextSteps || [],
-      developmentalAreas: req.body.developmentalAreas || [],
-      methodologyTags: req.body.methodologyTags || [],
-      sharedWith: req.body.sharedWith || [],
-      isPrivate: req.body.isPrivate || false,
+      observations: bodyData.observations || [],
+      milestones: bodyData.milestones || [],
+      nextSteps: bodyData.nextSteps || [],
+      developmentalAreas: bodyData.developmentalAreas || [],
+      methodologyTags: bodyData.methodologyTags || [],
+      sharedWith: bodyData.sharedWith || [],
+      isPrivate: bodyData.isPrivate || false,
       reactions: {
-        hearts: req.body.reactions?.hearts || 0,
-        celebrations: req.body.reactions?.celebrations || 0,
-        insights: req.body.reactions?.insights || 0
+        hearts: bodyData.reactions?.hearts || 0,
+        celebrations: bodyData.reactions?.celebrations || 0,
+        insights: bodyData.reactions?.insights || 0
       }
     };
 
     const story = await learningStoryService.create(storyData);
 
-    logger.info({ storyId: story.id, childId: req.body.childId }, 'Learning story created');
+    logger.info({ storyId: story.id, childId: bodyData.childId }, 'Learning story created');
     res.json(story);
   } catch (err) {
     logger.error({ err }, 'Error creating learning story');
@@ -163,12 +176,36 @@ router.put('/:id', auth, upload.fields([
       return res.status(404).json({ msg: 'Learning story not found' });
     }
 
+    // Parse JSON data from FormData if present, otherwise use req.body directly
+    let bodyData: any = req.body;
+    if (req.body.data && typeof req.body.data === 'string') {
+      try {
+        bodyData = JSON.parse(req.body.data);
+      } catch (e) {
+        logger.warn({ err: e }, 'Failed to parse JSON data from FormData');
+      }
+    }
+
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     
-    // Update media if new files uploaded
-    const updateData: any = { ...req.body };
+    // Build update data
+    const updateData: any = {};
     
-    if (files) {
+    if (bodyData.title !== undefined) updateData.title = bodyData.title;
+    if (bodyData.description !== undefined) updateData.description = bodyData.description;
+    if (bodyData.date !== undefined) updateData.date = bodyData.date;
+    if (bodyData.activityId !== undefined) updateData.activityId = bodyData.activityId;
+    if (bodyData.observations !== undefined) updateData.observations = bodyData.observations;
+    if (bodyData.milestones !== undefined) updateData.milestones = bodyData.milestones;
+    if (bodyData.nextSteps !== undefined) updateData.nextSteps = bodyData.nextSteps;
+    if (bodyData.developmentalAreas !== undefined) updateData.developmentalAreas = bodyData.developmentalAreas;
+    if (bodyData.methodologyTags !== undefined) updateData.methodologyTags = bodyData.methodologyTags;
+    if (bodyData.sharedWith !== undefined) updateData.sharedWith = bodyData.sharedWith;
+    if (bodyData.isPrivate !== undefined) updateData.isPrivate = bodyData.isPrivate;
+    if (bodyData.reactions !== undefined) updateData.reactions = bodyData.reactions;
+    
+    // Update media if new files uploaded or media is explicitly provided
+    if (files && (files.photos || files.videos || files.audio)) {
       const media = { ...story.media };
       
       if (files.photos) {
@@ -182,6 +219,8 @@ router.put('/:id', auth, upload.fields([
       }
       
       updateData.media = media;
+    } else if (bodyData.media !== undefined) {
+      updateData.media = bodyData.media;
     }
 
     const updatedStory = await learningStoryService.update(req.params.id, req.user?.id || '', updateData);

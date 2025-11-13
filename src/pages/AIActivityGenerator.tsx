@@ -113,12 +113,17 @@ const AIActivityGenerator = () => {
   // Test OpenAI connection on component mount
   useEffect(() => {
     const checkConnection = async () => {
-      const connected = await testOpenAIConnection();
-      setOpenAIConnected(connected);
-      if (connected) {
-        toast.success('OpenAI connected successfully!');
-      } else {
-        toast.error('OpenAI connection unavailable. Using fallback generation.');
+      try {
+        const connected = await testOpenAIConnection();
+        setOpenAIConnected(connected);
+        if (connected) {
+          toast.success('OpenAI connected successfully!');
+        } else {
+          toast.error('OpenAI connection unavailable. Please check your API key in .env.local file.');
+        }
+      } catch (error: any) {
+        setOpenAIConnected(false);
+        toast.error('OpenAI connection unavailable. Please check your API key and internet connection.');
       }
     };
     checkConnection();
