@@ -47,7 +47,10 @@ const TherapyCenter = () => {
     otGoals, 
     assessments,
     getSessionsForChild,
-    getProgressData
+    getProgressData,
+    fetchSessions,
+    fetchSpeechGoals,
+    fetchOTGoals
   } = useTherapyStore();
   
   const [activeTab, setActiveTab] = useState<'overview' | 'speech' | 'ot' | 'sessions' | 'assessments'>('overview');
@@ -55,9 +58,22 @@ const TherapyCenter = () => {
   const [showSpeechAssessment, setShowSpeechAssessment] = useState(false);
   const [showOTAssessment, setShowOTAssessment] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [progressData, setProgressData] = useState<{ speech: number; ot: number } | null>(null);
+
+  // Fetch data when activeChild changes
+  useEffect(() => {
+    if (activeChild) {
+      fetchSessions(activeChild.id);
+      fetchSpeechGoals(activeChild.id);
+      fetchOTGoals(activeChild.id);
+      getProgressData(activeChild.id).then(setProgressData);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChild?.id]);
 
   const childSessions = activeChild ? getSessionsForChild(activeChild.id) : [];
-  const progressData = activeChild ? getProgressData(activeChild.id) : null;
+  const childSpeechGoals = activeChild ? speechGoals.filter(g => g.childId === activeChild.id) : [];
+  const childOTGoals = activeChild ? otGoals.filter(g => g.childId === activeChild.id) : [];
 
   const therapyAreas = [
     {
@@ -66,7 +82,7 @@ const TherapyCenter = () => {
       icon: <Mic className="w-8 h-8" />,
       color: 'from-blue-500 to-blue-600',
       description: 'Articulation, language, and communication skills',
-      goals: activeChild?.speechGoals.length || 0,
+      goals: childSpeechGoals.length,
       progress: progressData?.speech || 0,
       sessions: childSessions.filter(s => s.type === 'speech').length
     },
@@ -76,7 +92,7 @@ const TherapyCenter = () => {
       icon: <Hand className="w-8 h-8" />,
       color: 'from-green-500 to-green-600',
       description: 'Fine motor, sensory, and daily living skills',
-      goals: activeChild?.otGoals.length || 0,
+      goals: childOTGoals.length,
       progress: progressData?.ot || 0,
       sessions: childSessions.filter(s => s.type === 'ot').length
     }
@@ -292,20 +308,35 @@ const TherapyCenter = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Current Speech Goals</h3>
         <div className="space-y-4">
-          {activeChild?.speechGoals.map((goal, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+          {childSpeechGoals.map((goal) => (
+            <div key={goal.id} className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Target className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-gray-900">{goal}</span>
+                <div>
+                  <span className="font-medium text-gray-900">{goal.title}</span>
+                  <p className="text-xs text-gray-600 mt-1">{goal.description}</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-24 bg-gray-200 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${Math.random() * 100}%` }} />
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${goal.targetLevel > 0 ? Math.min((goal.currentLevel / goal.targetLevel) * 100, 100) : 0}%` 
+                    }} 
+                  />
                 </div>
-                <span className="text-sm text-gray-600">{Math.floor(Math.random() * 100)}%</span>
+                <span className="text-sm text-gray-600">
+                  {goal.targetLevel > 0 ? Math.round((goal.currentLevel / goal.targetLevel) * 100) : 0}%
+                </span>
               </div>
             </div>
           ))}
+          {childSpeechGoals.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No speech goals set yet
+            </div>
+          )}
         </div>
       </div>
 
@@ -389,20 +420,35 @@ const TherapyCenter = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Current OT Goals</h3>
         <div className="space-y-4">
-          {activeChild?.otGoals.map((goal, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+          {childOTGoals.map((goal) => (
+            <div key={goal.id} className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Hand className="w-5 h-5 text-green-600" />
-                <span className="font-medium text-gray-900">{goal}</span>
+                <div>
+                  <span className="font-medium text-gray-900">{goal.title}</span>
+                  <p className="text-xs text-gray-600 mt-1">{goal.description}</p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-24 bg-gray-200 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: `${Math.random() * 100}%` }} />
+                  <div 
+                    className="bg-green-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ 
+                      width: `${goal.targetLevel > 0 ? Math.min((goal.currentLevel / goal.targetLevel) * 100, 100) : 0}%` 
+                    }} 
+                  />
                 </div>
-                <span className="text-sm text-gray-600">{Math.floor(Math.random() * 100)}%</span>
+                <span className="text-sm text-gray-600">
+                  {goal.targetLevel > 0 ? Math.round((goal.currentLevel / goal.targetLevel) * 100) : 0}%
+                </span>
               </div>
             </div>
           ))}
+          {childOTGoals.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No OT goals set yet
+            </div>
+          )}
         </div>
       </div>
 

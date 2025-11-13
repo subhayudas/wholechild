@@ -34,7 +34,7 @@ import {
 import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
 import { useLearningStoryStore } from '../store/learningStoryStore';
-import { useTherapyStore } from '../store/therapyStore';
+import { useTherapyStore, type TherapySession } from '../store/therapyStore';
 import ProgressChart from '../components/ProgressChart';
 import DevelopmentalRadarChart from '../components/DevelopmentalRadarChart';
 import ActivityHeatmap from '../components/ActivityHeatmap';
@@ -44,16 +44,18 @@ import ProgressReport from '../components/ProgressReport';
 import toast from 'react-hot-toast';
 
 const ProgressAnalytics = () => {
-  const { children, activeChild, setActiveChild } = useChildStore();
-  const { activities } = useActivityStore();
-  const { getStoriesForChild } = useLearningStoryStore();
-  const { getSessionsForChild, getProgressData } = useTherapyStore();
+  const { children, activeChild, setActiveChild, fetchChildren } = useChildStore();
+  const { activities, fetchActivities } = useActivityStore();
+  const { getStoriesForChild, fetchStories } = useLearningStoryStore();
+  const { getSessionsForChild, getProgressData, fetchSessions, fetchSpeechGoals, fetchOTGoals, speechGoals, otGoals } = useTherapyStore();
   
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['cognitive', 'language', 'social', 'physical', 'creative']);
   const [showInsights, setShowInsights] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'development' | 'activities' | 'therapy' | 'milestones' | 'reports'>('overview');
   const [showReportModal, setShowReportModal] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const timeframes = [
     { id: 'week', label: 'This Week', days: 7 },
@@ -70,85 +72,127 @@ const ProgressAnalytics = () => {
     { id: 'creative', label: 'Creative', icon: Palette, color: 'pink' }
   ];
 
-  // Calculate analytics data
-  const getAnalyticsData = () => {
-    if (!activeChild) return null;
-
-    const childStories = getStoriesForChild(activeChild.id);
-    const therapySessions = getSessionsForChild(activeChild.id);
-    const therapyProgress = getProgressData(activeChild.id);
-    
-    const now = new Date();
-    const timeframeDays = timeframes.find(t => t.id === selectedTimeframe)?.days || 30;
-    const startDate = new Date(now.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
-
-    // Filter data by timeframe
-    const recentActivities = activeChild.activityHistory.filter(
-      activity => new Date(activity.completedAt) >= startDate
-    );
-    const recentStories = childStories.filter(
-      story => new Date(story.date) >= startDate
-    );
-    const recentSessions = therapySessions.filter(
-      session => new Date(session.date) >= startDate
-    );
-
-    // Calculate metrics
-    const totalActivities = recentActivities.length;
-    const totalLearningTime = recentActivities.reduce((sum, activity) => sum + activity.duration, 0);
-    const averageSessionTime = totalActivities > 0 ? Math.round(totalLearningTime / totalActivities) : 0;
-    const storiesCreated = recentStories.length;
-    const therapySessionsCompleted = recentSessions.filter(s => s.status === 'completed').length;
-
-    // Calculate progress trends
-    const previousPeriodStart = new Date(startDate.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
-    const previousActivities = activeChild.activityHistory.filter(
-      activity => new Date(activity.completedAt) >= previousPeriodStart && new Date(activity.completedAt) < startDate
-    );
-    
-    const activityTrend = previousActivities.length > 0 
-      ? ((totalActivities - previousActivities.length) / previousActivities.length) * 100 
-      : totalActivities > 0 ? 100 : 0;
-
-    // Calculate developmental progress
-    const developmentalProgress = developmentalAreas.map(area => ({
-      ...area,
-      current: activeChild.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile],
-      trend: Math.random() * 10 - 5 // Mock trend data
-    }));
-
-    // Activity distribution by category
-    const activityCategories = recentActivities.reduce((acc, activity) => {
-      const activityData = activities.find(a => a.id === activity.activityId);
-      if (activityData) {
-        acc[activityData.category] = (acc[activityData.category] || 0) + 1;
+  // Fetch all data when component mounts or activeChild changes
+  useEffect(() => {
+    const fetchAllData = async () => {
+      if (!activeChild) {
+        setAnalyticsData(null);
+        setIsLoading(false);
+        return;
       }
-      return acc;
-    }, {} as Record<string, number>);
 
-    // Learning streaks
-    const currentStreak = activeChild.currentStreak;
-    const longestStreak = Math.max(currentStreak, 7); // Mock data
-
-    return {
-      totalActivities,
-      totalLearningTime,
-      averageSessionTime,
-      storiesCreated,
-      therapySessionsCompleted,
-      activityTrend,
-      developmentalProgress,
-      activityCategories,
-      currentStreak,
-      longestStreak,
-      therapyProgress,
-      recentActivities,
-      recentStories,
-      recentSessions
+      setIsLoading(true);
+      try {
+        // Fetch all required data in parallel
+        await Promise.all([
+          fetchChildren(),
+          fetchActivities(),
+          fetchStories(activeChild.id),
+          fetchSessions(activeChild.id),
+          fetchSpeechGoals(activeChild.id),
+          fetchOTGoals(activeChild.id)
+        ]);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  };
 
-  const analyticsData = getAnalyticsData();
+    fetchAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChild?.id]);
+
+  // Recalculate analytics when data or timeframe changes
+  useEffect(() => {
+    const calculateAnalytics = async () => {
+      if (!activeChild) {
+        setAnalyticsData(null);
+        return;
+      }
+
+      try {
+        const childStories = getStoriesForChild(activeChild.id);
+        const therapySessions = getSessionsForChild(activeChild.id);
+        const therapyProgress = await getProgressData(activeChild.id);
+        
+        const now = new Date();
+        const timeframeDays = timeframes.find(t => t.id === selectedTimeframe)?.days || 30;
+        const startDate = new Date(now.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
+
+        // Filter data by timeframe
+        const recentActivities = activeChild.activityHistory.filter(
+          activity => new Date(activity.completedAt) >= startDate
+        );
+        const recentStories = childStories.filter(
+          story => new Date(story.date) >= startDate
+        );
+        const recentSessions = therapySessions.filter(
+          session => new Date(session.date) >= startDate
+        );
+
+        // Calculate metrics
+        const totalActivities = recentActivities.length;
+        const totalLearningTime = recentActivities.reduce((sum, activity) => sum + activity.duration, 0);
+        const averageSessionTime = totalActivities > 0 ? Math.round(totalLearningTime / totalActivities) : 0;
+        const storiesCreated = recentStories.length;
+        const therapySessionsCompleted = recentSessions.filter(s => s.status === 'completed').length;
+
+        // Calculate progress trends
+        const previousPeriodStart = new Date(startDate.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
+        const previousActivities = activeChild.activityHistory.filter(
+          activity => new Date(activity.completedAt) >= previousPeriodStart && new Date(activity.completedAt) < startDate
+        );
+        
+        const activityTrend = previousActivities.length > 0 
+          ? ((totalActivities - previousActivities.length) / previousActivities.length) * 100 
+          : totalActivities > 0 ? 100 : 0;
+
+        // Calculate developmental progress
+        const developmentalProgress = developmentalAreas.map(area => ({
+          ...area,
+          current: activeChild.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile],
+          trend: 0 // Will be calculated from historical data if available
+        }));
+
+        // Activity distribution by category
+        const activityCategories = recentActivities.reduce((acc, activity) => {
+          const activityData = activities.find(a => a.id === activity.activityId);
+          if (activityData) {
+            acc[activityData.category] = (acc[activityData.category] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Learning streaks
+        const currentStreak = activeChild.currentStreak;
+        const longestStreak = Math.max(currentStreak, 7); // Could be fetched from achievements if needed
+
+        setAnalyticsData({
+          totalActivities,
+          totalLearningTime,
+          averageSessionTime,
+          storiesCreated,
+          therapySessionsCompleted,
+          activityTrend,
+          developmentalProgress,
+          activityCategories,
+          currentStreak,
+          longestStreak,
+          therapyProgress,
+          recentActivities,
+          recentStories,
+          recentSessions
+        });
+      } catch (error) {
+        console.error('Error calculating analytics:', error);
+        setAnalyticsData(null);
+      }
+    };
+
+    calculateAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeChild, selectedTimeframe, activities.length]);
 
   const renderOverviewTab = () => {
     if (!analyticsData) return null;
@@ -392,81 +436,124 @@ const ProgressAnalytics = () => {
     </div>
   );
 
-  const renderTherapyTab = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Speech Therapy Progress</h3>
-          <div className="text-center mb-4">
-            <div className="text-4xl font-bold text-blue-600">{analyticsData?.therapyProgress?.speech || 0}%</div>
-            <div className="text-sm text-gray-600">Overall Progress</div>
-          </div>
-          <div className="space-y-3">
-            {activeChild?.speechGoals.map((goal, index) => (
-              <div key={index} className="p-3 bg-blue-50 rounded-lg">
-                <div className="font-medium text-blue-900 text-sm">{goal}</div>
-                <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full" 
-                    style={{ width: `${Math.random() * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+  const renderTherapyTab = () => {
+    const childSpeechGoals = speechGoals.filter(g => g.childId === activeChild?.id);
+    const childOTGoals = otGoals.filter(g => g.childId === activeChild?.id);
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">OT Progress</h3>
-          <div className="text-center mb-4">
-            <div className="text-4xl font-bold text-green-600">{analyticsData?.therapyProgress?.ot || 0}%</div>
-            <div className="text-sm text-gray-600">Overall Progress</div>
-          </div>
-          <div className="space-y-3">
-            {activeChild?.otGoals.map((goal, index) => (
-              <div key={index} className="p-3 bg-green-50 rounded-lg">
-                <div className="font-medium text-green-900 text-sm">{goal}</div>
-                <div className="w-full bg-green-200 rounded-full h-2 mt-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${Math.random() * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Therapy Sessions</h3>
-        <div className="space-y-4">
-          {analyticsData?.recentSessions.map((session, index) => (
-            <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  session.type === 'speech' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                }`}>
-                  {session.type === 'speech' ? '🗣️' : '✋'}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">{session.title}</div>
-                  <div className="text-sm text-gray-600">{new Date(session.date).toLocaleDateString()}</div>
-                </div>
-              </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                session.status === 'completed' 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-yellow-100 text-yellow-700'
-              }`}>
-                {session.status}
-              </div>
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Speech Therapy Progress</h3>
+            <div className="text-center mb-4">
+              <div className="text-4xl font-bold text-blue-600">{analyticsData?.therapyProgress?.speech || 0}%</div>
+              <div className="text-sm text-gray-600">Overall Progress</div>
             </div>
-          ))}
+            <div className="space-y-3">
+              {childSpeechGoals.length > 0 ? (
+                childSpeechGoals.map((goal) => {
+                  const progressPercentage = goal.targetLevel > 0 
+                    ? (goal.currentLevel / goal.targetLevel) * 100 
+                    : 0;
+                  return (
+                    <div key={goal.id} className="p-3 bg-blue-50 rounded-lg">
+                      <div className="font-medium text-blue-900 text-sm mb-1">{goal.title}</div>
+                      <div className="text-xs text-blue-700 mb-2">{goal.description}</div>
+                      <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        Level {goal.currentLevel} / {goal.targetLevel}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-gray-500 text-center py-4">
+                  No speech goals set yet
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">OT Progress</h3>
+            <div className="text-center mb-4">
+              <div className="text-4xl font-bold text-green-600">{analyticsData?.therapyProgress?.ot || 0}%</div>
+              <div className="text-sm text-gray-600">Overall Progress</div>
+            </div>
+            <div className="space-y-3">
+              {childOTGoals.length > 0 ? (
+                childOTGoals.map((goal) => {
+                  const progressPercentage = goal.targetLevel > 0 
+                    ? (goal.currentLevel / goal.targetLevel) * 100 
+                    : 0;
+                  return (
+                    <div key={goal.id} className="p-3 bg-green-50 rounded-lg">
+                      <div className="font-medium text-green-900 text-sm mb-1">{goal.title}</div>
+                      <div className="text-xs text-green-700 mb-2">{goal.description}</div>
+                      <div className="w-full bg-green-200 rounded-full h-2 mt-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full transition-all duration-500" 
+                          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-green-600 mt-1">
+                        Level {goal.currentLevel} / {goal.targetLevel}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-gray-500 text-center py-4">
+                  No OT goals set yet
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Therapy Sessions</h3>
+          <div className="space-y-4">
+            {analyticsData?.recentSessions && analyticsData.recentSessions.length > 0 ? (
+              analyticsData.recentSessions.map((session: TherapySession) => (
+                <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      session.type === 'speech' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
+                    }`}>
+                      {session.type === 'speech' ? '🗣️' : '✋'}
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{session.title}</div>
+                      <div className="text-sm text-gray-600">{new Date(session.date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    session.status === 'completed' 
+                      ? 'bg-green-100 text-green-700' 
+                      : session.status === 'in-progress'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {session.status}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-gray-500 text-center py-4">
+                No therapy sessions found for this period
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderMilestonesTab = () => (
     <div className="space-y-8">
@@ -564,6 +651,19 @@ const ProgressAnalytics = () => {
             <p className="text-gray-600">
               Please select a child profile to view their progress analytics.
             </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading analytics data...</p>
           </div>
         </div>
       </div>

@@ -94,3 +94,4 @@ The trigger `on_auth_user_created` should automatically create a user record whe
 
 The INSERT policy provides a fallback so the frontend can create the user record if needed.
 
+

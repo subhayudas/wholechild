@@ -86,3 +86,4 @@ Environment variables (`.env.local`):
 - The `src/services/api.ts` file exists but is **not imported or used** by `childrenService.ts`
 - All child profile operations bypass the backend completely
 
+
