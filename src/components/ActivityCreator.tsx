@@ -153,20 +153,37 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
     updateFormData('developmentalAreas', newAreas);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title.trim()) {
       toast.error('Please enter a title');
+      return;
+    }
+    if (!formData.category || formData.category.trim() === '') {
+      toast.error('Please select a category');
       return;
     }
     if (formData.methodologies.length === 0) {
       toast.error('Please select at least one methodology');
       return;
     }
+    
+    // Validate materials and instructions have at least one non-empty item
+    const filteredMaterials = formData.materials.filter(m => m.trim());
+    const filteredInstructions = formData.instructions.filter(i => i.trim());
+    
+    if (filteredMaterials.length === 0) {
+      toast.error('Please add at least one material');
+      return;
+    }
+    if (filteredInstructions.length === 0) {
+      toast.error('Please add at least one instruction');
+      return;
+    }
 
     const activityData = {
       ...formData,
-      materials: formData.materials.filter(m => m.trim()),
-      instructions: formData.instructions.filter(i => i.trim()),
+      materials: filteredMaterials,
+      instructions: filteredInstructions,
       learningObjectives: formData.learningObjectives.filter(o => o.trim()),
       speechTargets: formData.speechTargets.filter(t => t.trim()),
       otTargets: formData.otTargets.filter(t => t.trim()),
@@ -181,19 +198,30 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
         milestones: formData.assessment.milestones.filter(m => m.trim())
       },
       media: { images: [], videos: [], audio: [] },
+      parentGuidance: activity?.parentGuidance || {
+        setupTips: [],
+        encouragementPhrases: [],
+        extensionIdeas: [],
+        troubleshooting: []
+      },
       createdBy: 'Current User',
       rating: 0,
       reviews: 0,
       price: 0
     };
 
-    if (activity) {
-      updateActivity(activity.id, activityData);
-    } else {
-      addActivity(activityData);
+    try {
+      if (activity) {
+        await updateActivity(activity.id, activityData);
+      } else {
+        await addActivity(activityData);
+      }
+      onSave();
+    } catch (error: any) {
+      console.error('Error saving activity:', error);
+      toast.error(error?.message || 'Failed to save activity. Please try again.');
+      // Don't call onSave() if there's an error
     }
-
-    onSave();
   };
 
   const renderStep = () => {
@@ -225,11 +253,12 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                 <select
                   value={formData.category}
                   onChange={(e) => updateFormData('category', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
                 >
                   <option value="">Select a category</option>
                   {categories.map(category => (

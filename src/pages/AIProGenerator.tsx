@@ -158,27 +158,54 @@ const AIProGenerator = () => {
   const handleSaveToLibrary = async () => {
     if (!generatedActivity) return;
     
+    // Validate category is selected
+    if (!formData.category || formData.category.trim() === '') {
+      toast.error('Please select a category before saving');
+      return;
+    }
+    
     try {
       await addActivity({
-        ...generatedActivity,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: 'current-user', // Replace with actual user ID
+        title: generatedActivity.title,
+        description: generatedActivity.description,
+        methodologies: formData.methodologies as any || [],
+        ageRange: [formData.childProfile?.age || 3, (formData.childProfile?.age || 3) + 2] as [number, number],
+        duration: formData.duration || 30,
+        materials: generatedActivity.materials,
+        instructions: generatedActivity.instructions,
+        learningObjectives: generatedActivity.learningObjectives,
+        developmentalAreas: generatedActivity.developmentalAreas || [],
+        speechTargets: generatedActivity.speechTargets || [],
+        otTargets: generatedActivity.otTargets || [],
+        difficulty: 3 as const,
+        category: formData.category,
         tags: [...(generatedActivity.tags || []), 'ai-generated'],
+        media: { images: [], videos: [], audio: [] },
+        createdBy: 'AI Assistant',
         rating: 0,
-        difficulty: 3,
-        ageRange: [formData.childProfile?.age || 3, (formData.childProfile?.age || 3) + 2],
-        category: formData.category || 'general',
-        methodology: formData.methodologies?.[0] || 'play-based',
-        environment: formData.environment || 'indoor',
-        groupSize: formData.advancedOptions?.groupSize || 'small',
-        duration: formData.duration || 30
+        reviews: 0,
+        price: 0,
+        adaptations: generatedActivity.adaptations || {
+          sensory: [],
+          motor: [],
+          cognitive: []
+        },
+        assessment: generatedActivity.assessment || {
+          observationPoints: [],
+          milestones: []
+        },
+        parentGuidance: generatedActivity.parentGuidance || {
+          setupTips: [],
+          encouragementPhrases: [],
+          extensionIdeas: [],
+          troubleshooting: []
+        }
       });
       setSaved(true);
       toast.success('Activity saved to library!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving activity:', error);
+      toast.error(error?.message || 'Failed to save activity');
     }
   };
 

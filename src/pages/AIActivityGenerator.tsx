@@ -241,6 +241,12 @@ const AIActivityGenerator = () => {
   const handleSaveToLibrary = () => {
     if (!generatedActivity) return;
 
+    // Validate category is selected
+    if (!formData.category || formData.category.trim() === '') {
+      toast.error('Please select a category before saving');
+      return;
+    }
+
     const activityToSave = {
       title: generatedActivity.title,
       description: generatedActivity.description,
@@ -254,7 +260,7 @@ const AIActivityGenerator = () => {
       speechTargets: generatedActivity.speechTargets || [],
       otTargets: generatedActivity.otTargets || [],
       difficulty: 2 as const,
-      category: formData.category || 'General',
+      category: formData.category,
       tags: [...(generatedActivity.tags || []), 'ai-generated'],
       media: { images: [], videos: [], audio: [] },
       createdBy: 'AI Assistant',
