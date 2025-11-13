@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../utils/supabase';
+import { createChildLogger } from '../utils/logger';
 
 export interface Activity {
   id: string;
@@ -109,45 +110,71 @@ export const activityService = {
   },
 
   async create(activityData: Omit<Activity, 'id' | 'created_at' | 'updated_at'>): Promise<Activity> {
+    // Validate required fields
+    if (!activityData.userId) {
+      throw new Error('User ID is required to create activity');
+    }
+    if (!activityData.title) {
+      throw new Error('Title is required to create activity');
+    }
+    if (!activityData.category) {
+      throw new Error('Category is required to create activity');
+    }
+
+    const insertData = {
+      user_id: activityData.userId,
+      title: activityData.title,
+      description: activityData.description,
+      methodologies: activityData.methodologies || [],
+      age_range: activityData.ageRange,
+      duration: activityData.duration,
+      materials: activityData.materials || [],
+      instructions: activityData.instructions || [],
+      learning_objectives: activityData.learningObjectives || [],
+      developmental_areas: activityData.developmentalAreas || [],
+      speech_targets: activityData.speechTargets || [],
+      ot_targets: activityData.otTargets || [],
+      difficulty: activityData.difficulty || 3,
+      category: activityData.category,
+      tags: activityData.tags || [],
+      media: activityData.media || { images: [], videos: [], audio: [] },
+      adaptations: activityData.adaptations || { sensory: [], motor: [], cognitive: [] },
+      assessment: activityData.assessment || { observationPoints: [], milestones: [] },
+      created_by: activityData.createdBy,
+      rating: activityData.rating || 0,
+      reviews: activityData.reviews || 0,
+      price: activityData.price || 0,
+      parent_guidance: activityData.parentGuidance || {
+        setupTips: [],
+        encouragementPhrases: [],
+        extensionIdeas: [],
+        troubleshooting: [],
+      },
+      is_ai_generated: activityData.isAIGenerated || false,
+      is_favorite: activityData.isFavorite || false,
+    };
+
     const { data, error } = await getSupabaseClient()
       .from('activities')
-      .insert({
-        user_id: activityData.userId,
-        title: activityData.title,
-        description: activityData.description,
-        methodologies: activityData.methodologies || [],
-        age_range: activityData.ageRange,
-        duration: activityData.duration,
-        materials: activityData.materials || [],
-        instructions: activityData.instructions || [],
-        learning_objectives: activityData.learningObjectives || [],
-        developmental_areas: activityData.developmentalAreas || [],
-        speech_targets: activityData.speechTargets || [],
-        ot_targets: activityData.otTargets || [],
-        difficulty: activityData.difficulty || 3,
-        category: activityData.category,
-        tags: activityData.tags || [],
-        media: activityData.media || { images: [], videos: [], audio: [] },
-        adaptations: activityData.adaptations || { sensory: [], motor: [], cognitive: [] },
-        assessment: activityData.assessment || { observationPoints: [], milestones: [] },
-        created_by: activityData.createdBy,
-        rating: activityData.rating || 0,
-        reviews: activityData.reviews || 0,
-        price: activityData.price || 0,
-        parent_guidance: activityData.parentGuidance || {
-          setupTips: [],
-          encouragementPhrases: [],
-          extensionIdeas: [],
-          troubleshooting: [],
-        },
-        is_ai_generated: activityData.isAIGenerated || false,
-        is_favorite: activityData.isFavorite || false,
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) {
-      throw new Error(`Failed to create activity: ${error.message}`);
+      const logger = createChildLogger({ service: 'activityService' });
+      logger.error({
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        userId: activityData.userId,
+        title: activityData.title,
+      }, 'Activity creation error');
+      throw new Error(`Failed to create activity: ${error.message}${error.details ? ` - ${error.details}` : ''}${error.hint ? ` (${error.hint})` : ''}`);
+    }
+
+    if (!data) {
+      throw new Error('Activity created but no data returned');
     }
 
     return transformActivity(data);

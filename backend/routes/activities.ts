@@ -72,9 +72,15 @@ router.post('/', auth, async (req: Request, res: Response) => {
   const logger = req.logger || createChildLogger({ route: 'activities/create' });
 
   try {
+    // Validate user is authenticated
+    if (!req.user?.id) {
+      logger.warn('Attempt to create activity without authenticated user');
+      return res.status(401).json({ msg: 'User not authenticated' });
+    }
+
     const activityData = {
       ...req.body,
-      userId: req.user?.id || '',
+      userId: req.user.id,
       rating: req.body.rating || 0,
       reviews: req.body.reviews || 0,
       isAIGenerated: req.body.isAIGenerated || false,
@@ -83,11 +89,24 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     const activity = await activityService.create(activityData);
 
-    logger.info({ activityId: activity.id, userId: req.user?.id }, 'Activity created');
+    logger.info({ activityId: activity.id, userId: req.user.id }, 'Activity created');
     res.json(activity);
-  } catch (err) {
-    logger.error({ err }, 'Error creating activity');
-    res.status(500).json({ msg: 'Server error' });
+  } catch (err: any) {
+    logger.error({ 
+      err: err.message || err, 
+      stack: err.stack,
+      userId: req.user?.id,
+      body: req.body 
+    }, 'Error creating activity');
+    
+    // Return more detailed error message in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? err.message || 'Server error'
+      : err.message?.includes('User ID is required') || err.message?.includes('Title is required') || err.message?.includes('Category is required')
+        ? err.message
+        : 'Server error';
+    
+    res.status(500).json({ msg: errorMessage });
   }
 });
 

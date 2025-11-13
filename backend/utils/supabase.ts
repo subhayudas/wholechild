@@ -22,14 +22,26 @@ export const initSupabase = (): SupabaseClient => {
     throw error;
   }
 
+  // Check if we're using service key (which bypasses RLS) or anon key
+  const isServiceKey = !!process.env.SUPABASE_SERVICE_KEY;
+  if (!isServiceKey) {
+    logger.warn('Using SUPABASE_ANON_KEY instead of SUPABASE_SERVICE_KEY. RLS policies will be enforced, which may cause insert failures.');
+  }
+
   supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
+    db: {
+      schema: 'public',
+    },
   });
 
-  logger.info({ url: supabaseUrl }, 'Supabase client initialized');
+  logger.info({ 
+    url: supabaseUrl, 
+    usingServiceKey: isServiceKey 
+  }, 'Supabase client initialized');
   return supabaseClient;
 };
 

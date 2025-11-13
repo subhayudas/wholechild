@@ -91,11 +91,12 @@ router.post('/', auth, upload.fields([
 ]), async (req: Request, res: Response) => {
   const logger = req.logger || createChildLogger({ route: 'learning-stories/create' });
 
+  let bodyData: any = req.body;
+  
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     
     // Parse JSON data from FormData if present, otherwise use req.body directly
-    let bodyData: any = req.body;
     if (req.body.data && typeof req.body.data === 'string') {
       try {
         bodyData = JSON.parse(req.body.data);
@@ -121,9 +122,15 @@ router.post('/', auth, upload.fields([
       media.audio = files.audio.map(file => `/uploads/${file.filename}`);
     }
 
+    // Validate user is authenticated
+    if (!req.user?.id) {
+      logger.warn('Attempt to create learning story without authenticated user');
+      return res.status(401).json({ msg: 'User not authenticated' });
+    }
+
     // Merge with existing media if provided in body
     const storyData = {
-      userId: req.user?.id,
+      userId: req.user.id,
       childId: bodyData.childId,
       title: bodyData.title,
       description: bodyData.description,
@@ -150,11 +157,24 @@ router.post('/', auth, upload.fields([
 
     const story = await learningStoryService.create(storyData);
 
-    logger.info({ storyId: story.id, childId: bodyData.childId }, 'Learning story created');
+    logger.info({ storyId: story.id, childId: bodyData.childId, userId: req.user.id }, 'Learning story created');
     res.json(story);
-  } catch (err) {
-    logger.error({ err }, 'Error creating learning story');
-    res.status(500).json({ msg: 'Server error' });
+  } catch (err: any) {
+    logger.error({ 
+      err: err.message || err, 
+      stack: err.stack,
+      userId: req.user?.id,
+      bodyData: bodyData 
+    }, 'Error creating learning story');
+    
+    // Return more detailed error message in development or for validation errors
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? err.message || 'Server error'
+      : err.message?.includes('User ID is required') || err.message?.includes('Child ID is required') || err.message?.includes('Title is required')
+        ? err.message
+        : 'Server error';
+    
+    res.status(500).json({ msg: errorMessage });
   }
 });
 
