@@ -103,7 +103,6 @@ export const useChildStore = create<ChildState>()(
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to fetch children';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
         }
       },
       
@@ -120,7 +119,6 @@ export const useChildStore = create<ChildState>()(
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to create child profile';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -140,7 +138,6 @@ export const useChildStore = create<ChildState>()(
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to update child profile';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -164,7 +161,6 @@ export const useChildStore = create<ChildState>()(
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to delete child profile';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -189,7 +185,6 @@ export const useChildStore = create<ChildState>()(
           toast.success('Activity completed and recorded!');
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to record activity completion';
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -206,7 +201,6 @@ export const useChildStore = create<ChildState>()(
           toast.success('Achievement added!');
         } catch (error: any) {
           const errorMessage = error.message || 'Failed to add achievement';
-          toast.error(errorMessage);
           throw error;
         }
       },

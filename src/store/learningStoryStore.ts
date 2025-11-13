@@ -83,7 +83,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch learning stories';
       set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
     }
   },
   
@@ -106,7 +105,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to fetch learning stories';
       set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
     }
   },
   
@@ -123,7 +121,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to create learning story';
       set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
       throw error;
     }
   },
@@ -143,7 +140,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to update learning story';
       set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
       throw error;
     }
   },
@@ -160,7 +156,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to delete learning story';
       set({ error: errorMessage, isLoading: false });
-      toast.error(errorMessage);
       throw error;
     }
   },
@@ -181,7 +176,6 @@ export const useLearningStoryStore = create<LearningStoryState>((set, get) => ({
       toast.success('Reaction added!');
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to add reaction';
-      toast.error(errorMessage);
       throw error;
     }
   }

@@ -51,7 +51,6 @@ export const useAuthStore = create<AuthState>()(
         } catch (error: any) {
           set({ isLoading: false });
           const errorMessage = error.message || 'Sign in failed';
-          toast.error(errorMessage);
           throw new Error(errorMessage);
         }
       },
@@ -76,7 +75,6 @@ export const useAuthStore = create<AuthState>()(
           toast.success('Signed out successfully');
         } catch (error: any) {
           set({ isLoading: false });
-          toast.error('Error signing out');
           throw error;
         }
       },

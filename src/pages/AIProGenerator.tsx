@@ -129,15 +129,9 @@ const AIProGenerator = () => {
       try {
         const connected = await testOpenAIConnection();
         setOpenAIConnected(connected);
-        if (connected) {
-          toast.success('OpenAI connected successfully!');
-        } else {
-          toast.error('OpenAI connection unavailable. Please check your API key in .env.local file.');
-        }
       } catch (error: any) {
         console.error('Failed to test OpenAI connection:', error);
         setOpenAIConnected(false);
-        toast.error('OpenAI connection unavailable. Please check your API key and internet connection.');
       }
     };
     testConnection();
@@ -156,7 +150,6 @@ const AIProGenerator = () => {
       toast.success('Activity generated successfully!');
     } catch (error) {
       console.error('Error generating activity:', error);
-      toast.error('Failed to generate activity. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -186,7 +179,6 @@ const AIProGenerator = () => {
       toast.success('Activity saved to library!');
     } catch (error) {
       console.error('Error saving activity:', error);
-      toast.error('Failed to save activity');
     }
   };
 

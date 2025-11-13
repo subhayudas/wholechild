@@ -114,7 +114,6 @@ export const useActivityStore = create<ActivityState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.msg || error.message || 'Failed to fetch activities';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
         }
       },
       favoriteActivities: [],
@@ -134,7 +133,6 @@ export const useActivityStore = create<ActivityState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.msg || error.message || 'Failed to save activity';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -154,7 +152,6 @@ export const useActivityStore = create<ActivityState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.msg || error.message || 'Failed to update activity';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -171,7 +168,6 @@ export const useActivityStore = create<ActivityState>()(
         } catch (error: any) {
           const errorMessage = error.response?.data?.msg || error.message || 'Failed to delete activity';
           set({ error: errorMessage, isLoading: false });
-          toast.error(errorMessage);
           throw error;
         }
       },
@@ -192,7 +188,6 @@ export const useActivityStore = create<ActivityState>()(
         }));
         } catch (error: any) {
           const errorMessage = error.response?.data?.msg || error.message || 'Failed to toggle favorite';
-          toast.error(errorMessage);
           throw error;
         }
       },
