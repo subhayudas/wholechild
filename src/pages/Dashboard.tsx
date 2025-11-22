@@ -22,9 +22,7 @@ import {
   Activity as ActivityIcon,
   MoreHorizontal,
   ChevronUp,
-  ChevronDown,
-  Loader2,
-  BarChart3
+  ChevronDown
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -55,9 +53,7 @@ const Dashboard = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState<'week' | 'month' | 'year'>('week');
   const [selectedDevArea, setSelectedDevArea] = useState<string | null>(null);
   const [devViewMode, setDevViewMode] = useState<'overview' | 'detailed' | 'trends'>('overview');
-  const [recentActivityHistory, setRecentActivityHistory] = useState<any[]>([]);
   const [activityStats, setActivityStats] = useState<any>(null);
-  const [isLoadingActivityData, setIsLoadingActivityData] = useState(false);
   
   useEffect(() => {
     // Fetch children on mount
@@ -84,12 +80,10 @@ const Dashboard = () => {
   const fetchActivityHistoryFromDB = async (childId: string) => {
     if (!childId) return;
     
-    setIsLoadingActivityData(true);
     try {
       // Get user ID for authentication
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        setIsLoadingActivityData(false);
         return;
       }
 
@@ -104,9 +98,7 @@ const Dashboard = () => {
 
       if (error) {
         console.error('Error fetching activity history:', error);
-        setRecentActivityHistory([]);
         setActivityStats(null);
-        setIsLoadingActivityData(false);
         return;
       }
 
@@ -122,7 +114,6 @@ const Dashboard = () => {
           if (activitiesError) {
             console.error('Error fetching activities:', activitiesError);
             // Still use history data even if activities fetch fails
-            setRecentActivityHistory(activityHistory);
             const stats = calculateActivityStats(activityHistory);
             setActivityStats(stats);
           } else {
@@ -132,26 +123,20 @@ const Dashboard = () => {
               activities: activitiesData?.find(a => a.id === historyItem.activity_id) || null
             }));
 
-            setRecentActivityHistory(mergedHistory);
             const stats = calculateActivityStats(mergedHistory);
             setActivityStats(stats);
           }
         } else {
-          setRecentActivityHistory(activityHistory);
           const stats = calculateActivityStats(activityHistory);
           setActivityStats(stats);
         }
       } else {
-        setRecentActivityHistory([]);
         setActivityStats(null);
       }
 
     } catch (error) {
       console.error('Error fetching activity history:', error);
-      setRecentActivityHistory([]);
       setActivityStats(null);
-    } finally {
-      setIsLoadingActivityData(false);
     }
   };
 
@@ -564,171 +549,6 @@ const Dashboard = () => {
             </motion.div>
           )}
 
-          {/* Database-Driven Activity Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Recent Activity Timeline - Direct from Database */}
-            <motion.div
-              className="border-b border-gray-100 pb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Recent Activity Timeline</h3>
-                <div className="text-xs text-gray-500">From Database</div>
-              </div>
-              {isLoadingActivityData ? (
-                <div className="flex items-center justify-center h-64">
-                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                  <span className="ml-2 text-gray-600">Loading activity data...</span>
-                </div>
-              ) : recentActivityHistory.length > 0 ? (
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  {recentActivityHistory.slice(0, 8).map((item: any, index: number) => {
-                    const activity = item.activities;
-                    const completedDate = new Date(item.completed_at);
-                    return (
-                      <motion.div
-                        key={item.id || index}
-                        className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                      >
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <h4 className="text-sm font-medium text-gray-900 truncate">
-                              {activity?.title || 'Activity'}
-                            </h4>
-                            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                              {completedDate.toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-600">
-                            {item.duration && (
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {item.duration} min
-                              </span>
-                            )}
-                            {activity?.category && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                                {activity.category}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <ActivityIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No activity history yet</p>
-                  <p className="text-sm">Complete activities to see them here</p>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Activity Statistics - Direct from Database */}
-            <motion.div
-              className="border-b border-gray-100 pb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Activity Statistics</h3>
-                <div className="text-xs text-gray-500">From Database</div>
-              </div>
-              {isLoadingActivityData ? (
-                <div className="flex items-center justify-center h-64">
-                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                  <span className="ml-2 text-gray-600">Loading statistics...</span>
-                </div>
-              ) : activityStats ? (
-                <div className="space-y-4">
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-blue-600">{activityStats.totalActivities}</div>
-                      <div className="text-sm text-gray-600">Total Activities</div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-green-600">{activityStats.totalMinutes}</div>
-                      <div className="text-sm text-gray-600">Total Minutes</div>
-                    </div>
-                  </div>
-
-                  {/* By Category */}
-                  {Object.keys(activityStats.byCategory).length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">By Category</h4>
-                      <div className="space-y-2">
-                        {Object.entries(activityStats.byCategory)
-                          .sort(([, a], [, b]) => (b as number) - (a as number))
-                          .slice(0, 5)
-                          .map(([category, count], index) => {
-                            const total = activityStats.totalActivities;
-                            const percentage = total > 0 ? Math.round(((count as number) / total) * 100) : 0;
-                            return (
-                              <div key={category} className="space-y-1">
-                                <div className="flex justify-between text-xs">
-                                  <span className="text-gray-700">{category}</span>
-                                  <span className="text-gray-600">{count} ({percentage}%)</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                  <motion.div
-                                    className="bg-blue-500 h-1.5 rounded-full"
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${percentage}%` }}
-                                    transition={{ duration: 0.8, delay: index * 0.1 }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* By Developmental Area */}
-                  {Object.keys(activityStats.byDevelopmentalArea).length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">By Developmental Area</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(activityStats.byDevelopmentalArea)
-                          .sort(([, a], [, b]) => (b as number) - (a as number))
-                          .slice(0, 5)
-                          .map(([area, count]) => (
-                            <span
-                              key={area}
-                              className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
-                            >
-                              {area}: {count}
-                            </span>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {Object.keys(activityStats.byCategory).length === 0 && Object.keys(activityStats.byDevelopmentalArea).length === 0 && (
-                    <div className="text-center py-8 text-gray-500 text-sm">
-                      Complete activities to see statistics
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-gray-500">
-                  <BarChart3 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No statistics available</p>
-                  <p className="text-sm">Complete activities to see statistics</p>
-                </div>
-              )}
-            </motion.div>
-          </div>
 
           {/* Development Overview - Clean & Organized */}
           {activeChild && (
@@ -1104,7 +924,7 @@ const Dashboard = () => {
             transition={{ duration: 0.6, delay: 0.6 }}
           >
             <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Link
                   to="/activity-builder"
@@ -1123,26 +943,6 @@ const Dashboard = () => {
                   <ArrowRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                 </Link>
               </motion.div>
-              
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link
-                  to="/learning-stories"
-                  className="flex items-center gap-3 p-4 hover:bg-gray-50 transition-all duration-200 rounded-lg group"
-                >
-                  <motion.div 
-                    className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors"
-                    whileHover={{ rotate: 5 }}
-                  >
-                    <Camera className="w-5 h-5 text-gray-600 group-hover:text-green-600 transition-colors" />
-                  </motion.div>
-                  <div>
-                    <p className="font-medium text-gray-900 group-hover:text-green-900 transition-colors">Capture Moment</p>
-                    <p className="text-sm text-gray-500">Document learning</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
-                </Link>
-              </motion.div>
-              
             </div>
           </motion.div>
 
