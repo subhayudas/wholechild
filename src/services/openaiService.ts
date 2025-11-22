@@ -58,37 +58,135 @@ const buildPrompt = (request: AIGenerationRequest) => {
     therapyTargetsSection += `- OT Targets: ${request.therapyTargets.ot.join(', ')}\n`;
   }
 
+  // Build a richer context section about the child's learning profile
+  const learningStyleContext = {
+    'visual': 'thrives with visual aids, charts, images, and visual demonstrations',
+    'auditory': 'learns best through listening, discussion, music, and verbal instructions',
+    'kinesthetic': 'needs hands-on movement, physical engagement, and tactile experiences',
+    'mixed': 'benefits from multi-modal approaches combining visual, auditory, and kinesthetic elements'
+  };
+
+  const energyLevelGuidance = {
+    'low': 'requires low-key, calming activities with minimal stimulation',
+    'medium': 'enjoys moderate-paced activities with balance of active and quiet moments',
+    'high': 'needs active, energetic activities with movement and dynamic engagement'
+  };
+
+  const socialPreferenceGuidance = {
+    'individual': 'prefers working alone, needs space and autonomy',
+    'small-group': 'enjoys working with 2-4 peers, collaborative but not overwhelming',
+    'large-group': 'thrives in group settings with 5+ children, enjoys social interaction'
+  };
+
   return `
-You are an expert early childhood educator and activity designer with advanced knowledge of educational technology, cultural sensitivity, and inclusive design. Create a comprehensive, personalized learning activity.
+TASK: Create a highly personalized, developmentally appropriate early childhood learning activity.
 
-CHILD PROFILE:
-- Name: ${request.childProfile.name}
-- Age: ${request.childProfile.age} years old
-- Interests: ${request.childProfile.interests.join(', ')}
-- Learning Style: ${request.childProfile.learningStyle}
-- Energy Level: ${request.childProfile.energyLevel}
-- Social Preference: ${request.childProfile.socialPreference}
-- Sensory Needs: ${request.childProfile.sensoryNeeds.join(', ')}
-- Speech Goals: ${request.childProfile.speechGoals.join(', ')}
-- OT Goals: ${request.childProfile.otGoals.join(', ')}
+═══════════════════════════════════════════════════════════════
+CHILD PROFILE & LEARNING NEEDS
+═══════════════════════════════════════════════════════════════
+NAME: ${request.childProfile.name}
+AGE: ${request.childProfile.age} years old (developmental stage: ${request.childProfile.age < 3 ? 'toddler' : request.childProfile.age < 5 ? 'preschooler' : 'early elementary'})
 
-ACTIVITY REQUIREMENTS:
-- Type: ${request.activityType}
-- Category: ${request.category}
-- Duration: ${request.duration} minutes
-- Environment: ${request.environment}
-- Educational Methodologies: ${selectedMethodologies}
-- Material Constraints: ${request.materialConstraints.join(', ')}
-- Learning Objectives: ${request.learningObjectives.join(', ')}
-${therapyTargetsSection}
-- Adaptation Needs: ${request.adaptationNeeds.join(', ')}
+PERSONAL INTERESTS & PASSIONS:
+${request.childProfile.interests.length > 0 ? request.childProfile.interests.map((i, idx) => `  ${idx + 1}. ${i}`).join('\n') : '  (To be discovered/explored through this activity)'}
 
-${advancedFeatures ? `ADVANCED FEATURES: ${advancedFeatures}` : ''}
+LEARNING STYLE: ${request.childProfile.learningStyle}
+  → ${learningStyleContext[request.childProfile.learningStyle as keyof typeof learningStyleContext] || 'benefits from varied approaches'}
 
-INSTRUCTIONS:
-Create a comprehensive activity that incorporates all requirements and advanced features. The activity should be engaging, educational, and specifically tailored to the child's profile.
+ENERGY LEVEL: ${request.childProfile.energyLevel}
+  → ${energyLevelGuidance[request.childProfile.energyLevel as keyof typeof energyLevelGuidance] || 'adaptable to various pacing'}
 
-Please respond with a JSON object containing the following structure:
+SOCIAL PREFERENCE: ${request.childProfile.socialPreference}
+  → ${socialPreferenceGuidance[request.childProfile.socialPreference as keyof typeof socialPreferenceGuidance] || 'flexible social arrangements'}
+
+SENSORY PROFILE:
+${request.childProfile.sensoryNeeds.length > 0 ? request.childProfile.sensoryNeeds.map((need, idx) => `  - ${need}`).join('\n') : '  No specific sensory considerations noted'}
+
+THERAPEUTIC GOALS:
+${request.childProfile.speechGoals.length > 0 ? `  Speech & Language: ${request.childProfile.speechGoals.join(', ')}` : '  No specific speech goals noted'}
+${request.childProfile.otGoals.length > 0 ? `  Occupational Therapy: ${request.childProfile.otGoals.join(', ')}` : '  No specific OT goals noted'}
+
+═══════════════════════════════════════════════════════════════
+ACTIVITY SPECIFICATIONS
+═══════════════════════════════════════════════════════════════
+ACTIVITY TYPE: ${request.activityType}
+CATEGORY: ${request.category}
+DURATION: ${request.duration} minutes (ensure activity fits naturally within this timeframe)
+ENVIRONMENT: ${request.environment} (consider space, safety, and resources available in this setting)
+
+EDUCATIONAL METHODOLOGIES TO INTEGRATE:
+${selectedMethodologies || 'Flexible approach - incorporate best practices from multiple methodologies'}
+
+MATERIAL CONSTRAINTS:
+${request.materialConstraints.length > 0 ? request.materialConstraints.map((constraint, idx) => `  ${idx + 1}. ${constraint}`).join('\n') : '  No specific constraints - use age-appropriate materials'}
+
+LEARNING OBJECTIVES (Target Outcomes):
+${request.learningObjectives.length > 0 ? request.learningObjectives.map((obj, idx) => `  ${idx + 1}. ${obj}`).join('\n') : '  Focus on age-appropriate developmental growth across domains'}
+
+${therapyTargetsSection ? `THERAPY TARGETS:\n${therapyTargetsSection}` : ''}
+
+${request.adaptationNeeds.length > 0 ? `ADAPTATION NEEDS:\n${request.adaptationNeeds.map((need, idx) => `  ${idx + 1}. ${need}`).join('\n')}\n` : ''}
+
+${advancedFeatures ? `ADVANCED FEATURES & OPTIMIZATIONS:\n${advancedFeatures.split(', ').map((feature, idx) => `  ${idx + 1}. ${feature}`).join('\n')}\n` : ''}
+
+═══════════════════════════════════════════════════════════════
+DESIGN REQUIREMENTS & QUALITY STANDARDS
+═══════════════════════════════════════════════════════════════
+
+1. PERSONALIZATION: This activity MUST feel uniquely designed for ${request.childProfile.name}. 
+   - Weave their interests naturally throughout (not forced or superficial)
+   - Honor their learning style preferences
+   - Match their energy level and social needs
+   - Respect their sensory profile
+
+2. METHODOLOGY INTEGRITY: If methodologies are specified, authentically incorporate their core principles.
+   - Montessori: self-direction, prepared environment, real materials, independence
+   - Reggio: project-based, child-led inquiry, documentation, aesthetic awareness
+   - Waldorf: rhythm, imagination, natural materials, artistic expression
+   - HighScope: plan-do-review, active learning, key developmental indicators
+   - Play-based: learning through play, child agency, intrinsic motivation
+
+3. DEVELOPMENTAL ALIGNMENT: Ensure all aspects match ${request.childProfile.age}-year-old capabilities.
+   - Cognitive complexity appropriate for age
+   - Fine/gross motor demands realistic
+   - Attention span considerations
+   - Language complexity suitable
+
+4. ENGAGEMENT OPTIMIZATION: Design for sustained, joyful engagement.
+   - Clear purpose and relevance
+   - Appropriate challenge (not too easy, not frustrating)
+   - Intrinsic motivation elements
+   - Natural flow and transitions
+
+5. PRACTICAL FEASIBILITY: Ensure the activity is actually doable.
+   - Materials are accessible and affordable
+   - Setup is reasonable for specified environment
+   - Time fits within duration constraint
+   - Cleanup is manageable
+
+6. HOLISTIC DEVELOPMENT: Target multiple developmental domains.
+   - Cognitive: thinking, problem-solving, memory, attention
+   - Physical: fine motor, gross motor, coordination, strength
+   - Social-Emotional: self-awareness, relationships, empathy, regulation
+   - Language: vocabulary, communication, listening, expression
+   - Creative: imagination, self-expression, innovation
+
+7. INCLUSIVE DESIGN: Make adaptations natural and seamless.
+   - Not "special" versions, but integrated flexibility
+   - Maintains activity integrity while meeting diverse needs
+   - Empowers all children to participate meaningfully
+
+8. FAMILY-FRIENDLY: Provide guidance that empowers, not overwhelms.
+   - Clear setup steps
+   - Specific encouragement language
+   - Realistic troubleshooting
+   - Meaningful extensions (not just "make it harder")
+
+═══════════════════════════════════════════════════════════════
+OUTPUT FORMAT (JSON Structure)
+═══════════════════════════════════════════════════════════════
+
+Respond with a well-structured JSON object containing:
 {
   "title": "Engaging activity title",
   "description": "Detailed description explaining benefits and methodology integration",
@@ -153,8 +251,19 @@ Please respond with a JSON object containing the following structure:
   }` : ''}
 }
 
-Make the activity comprehensive, engaging, and perfectly suited for the specified requirements and advanced features.
-`;
+CRITICAL OUTPUT REQUIREMENTS:
+- Return ONLY valid JSON - no markdown formatting, no code blocks, no explanations
+- Be comprehensive: fill every field with substantial, thoughtful content (minimum 3-5 items per array)
+- Be specific: avoid generic descriptions. Use concrete details, specific materials with quantities when helpful, and detailed steps
+- Be personalized: explicitly reference ${request.childProfile.name}'s interests, learning style, and needs throughout
+- Be age-appropriate: ensure all language, complexity, and expectations match a ${request.childProfile.age}-year-old's capabilities
+- Be actionable: provide clear, sequential steps that a caregiver can follow
+- Be authentic: if methodologies are specified, genuinely integrate their principles, don't just mention them
+- Be inclusive: if adaptations are needed, make them natural and integrated, not separate or "special"
+
+REMEMBER: This is not just an activity - it's a personalized learning experience designed specifically for ${request.childProfile.name} that respects their agency, honors their interests, supports their growth, and brings joy. Every element should be intentional, meaningful, and aligned with their unique profile.
+
+Return valid JSON only.`;
 };
 
 export const generateActivityWithAI = async (request: AIGenerationRequest): Promise<AIGeneratedActivity> => {
@@ -170,15 +279,72 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
       messages: [
         {
           role: "system",
-          content: "You are an expert early childhood educator and activity designer specializing in personalized learning experiences. Always respond with valid JSON only."
+          content: `You are an elite early childhood education specialist and activity designer with deep expertise in:
+          
+1. CHILD DEVELOPMENT PSYCHOLOGY: You understand developmental milestones, cognitive stages (Piaget, Vygotsky), brain development, and how learning occurs in the first 8 years of life.
+
+2. EDUCATIONAL METHODOLOGIES: You're deeply versed in Montessori, Reggio Emilia, Waldorf, HighScope, Bank Street, play-based, and inquiry-based approaches, understanding their core principles and how to authentically integrate them.
+
+3. PERSONALIZATION & DIFFERENTIATION: You excel at creating activities that genuinely match a child's unique profile - their interests, learning style, energy level, sensory needs, and social preferences. Every element is intentionally chosen.
+
+4. INCLUSIVE DESIGN: You create activities that are accessible and adaptable for children with diverse abilities, sensory needs, and learning differences, without making them feel "different" or watered down.
+
+5. ENGAGEMENT OPTIMIZATION: You know how to design activities that capture and maintain attention, incorporate intrinsic motivation, and create "flow states" where children are fully absorbed and learning naturally.
+
+6. MULTI-MODAL LEARNING: You integrate visual, auditory, kinesthetic, and tactile elements strategically to support different learning styles and create richer neural pathways.
+
+7. PROGRESSIVE COMPLEXITY: You design activities with built-in scaffolds, extensions, and challenges that allow natural progression without overwhelming the child.
+
+8. REAL-WORLD CONNECTION: You connect activities to children's lived experiences, making learning meaningful, relevant, and memorable.
+
+9. ASSESSMENT & OBSERVATION: You design activities that naturally reveal what a child knows and can do, with clear observation points and milestone indicators.
+
+10. FAMILY ENGAGEMENT: You create activities that families can easily implement at home, with clear guidance that empowers rather than overwhelms parents.
+
+YOUR APPROACH TO ACTIVITY DESIGN:
+- Start with the CHILD first, not the curriculum. Their interests, strengths, and needs drive every decision.
+- Make it PLAYFUL but PURPOSEFUL - learning should feel like play, but every element serves a developmental goal.
+- Be SPECIFIC and ACTIONABLE - vague ideas don't help. Provide concrete, doable steps with clear materials.
+- Think HOLISTICALLY - every activity should touch multiple developmental domains (cognitive, social-emotional, physical, language, creative).
+- Consider the ENTIRE EXPERIENCE - setup, engagement, cleanup, reflection, and follow-up extensions.
+- Honor DIFFERENCE - celebrate and incorporate cultural backgrounds, family values, and individual preferences authentically.
+- Build CONFIDENCE - activities should challenge but not frustrate, allowing children to experience competence and agency.
+- Connect to LARGER GOALS - each activity should clearly link to broader learning objectives and developmental outcomes.
+
+OUTPUT REQUIREMENTS:
+- Respond ONLY with valid, well-formed JSON - no markdown, no explanations, no additional text.
+- Be COMPREHENSIVE - include all requested sections with substantial, thoughtful content (minimum 3-5 items per array when applicable).
+- Be SPECIFIC - avoid generic descriptions. Use concrete examples, specific materials with quantities when helpful, and detailed steps.
+- Be AGE-APPROPRIATE - ensure all language, concepts, materials, and expectations match the child's developmental stage.
+- Be CULTURALLY RESPONSIVE - if cultural considerations are provided, authentically weave them into the activity design, not as an add-on.
+- Be THERAPEUTICALLY INTENTIONAL - if therapy targets are specified, integrate them naturally into the activity flow, not as separate exercises.
+- Be PRACTICAL - ensure materials are accessible, affordable within constraints, and setup is manageable for the environment specified.
+- Be SAFE - consider age-appropriate safety considerations and include them in guidance when relevant.
+- Be EXTENSIBLE - provide meaningful extension ideas that build on the core activity rather than just adding complexity.
+- Be OBSERVABLE - include specific, measurable observation points that help track progress toward objectives.
+
+QUALITY STANDARDS:
+- Title: Creative, engaging, age-appropriate, and descriptive (4-8 words)
+- Description: Compelling, clear about benefits, 2-4 sentences explaining why this activity is perfect for THIS child
+- Materials: Specific, complete, with quantities when relevant, categorized logically
+- Instructions: Step-by-step, sequential, clear, with educator notes where helpful (8-12 steps for complex activities)
+- Learning Objectives: Specific, measurable, developmentally appropriate, aligned with stated goals
+- Adaptations: Practical, actionable modifications that maintain activity integrity while meeting diverse needs
+- Assessment: Meaningful observation points and milestone indicators that naturally emerge from the activity
+- Parent Guidance: Empowering, clear, non-judgmental, with specific encouragement language and troubleshooting
+- Extensions: Authentic ways to deepen learning, not just "do it again" or "make it harder"
+
+Remember: You are creating a personalized learning experience that respects the child's agency, honors their interests, supports their growth, and brings joy to both child and caregiver. Quality over quantity - every element should be intentional and valuable.
+
+Always respond with valid JSON only.`
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 3000
+      temperature: 0.75,
+      max_tokens: 4000
     });
 
     const response = completion.choices[0]?.message?.content;
@@ -277,15 +443,41 @@ export const generateActivityVariations = async (
         messages: [
           {
             role: "system",
-            content: "You are an expert early childhood educator. Create activity variations based on the provided base activity. Always respond with valid JSON only."
+            content: `You are an expert early childhood educator specializing in activity adaptation and differentiation. Your role is to create thoughtful variations of activities that maintain their core educational value while meeting different needs.
+
+PRINCIPLES FOR VARIATION CREATION:
+1. PRESERVE INTENT: Keep the learning objectives and core educational value intact
+2. ADAPT AUTHENTICALLY: Make changes that feel natural, not forced or superficial
+3. MAINTAIN QUALITY: Variations should be as well-designed as the original
+4. BE SPECIFIC: Provide detailed, concrete modifications, not vague suggestions
+5. CONSIDER CONTEXT: Understand why this variation is needed (age, ability, interest, etc.)
+
+When creating variations:
+- Simplify by reducing complexity, not removing content - keep it complete
+- Enhance by adding depth and challenge, not just difficulty
+- Adapt by changing approach/materials/pacing, not core learning goals
+- Always ensure age-appropriateness for the target variation
+- Maintain the activity's engaging, joyful nature
+
+Respond with valid JSON only - same structure as the base activity, fully populated.`
           },
           {
             role: "user",
-            content: `Based on this activity: ${JSON.stringify(baseActivity)}\n\n${variationPrompts[i]}\n\nProvide the variation in the same JSON format.`
+            content: `Base Activity (reference this structure and quality):
+${JSON.stringify(baseActivity, null, 2)}
+
+Variation Request: ${variationPrompts[i]}
+
+Create a complete, high-quality variation that:
+- Maintains the same JSON structure
+- Meets the variation request authentically
+- Preserves the activity's educational integrity
+- Is comprehensive and well-detailed
+- Returns valid JSON only (no markdown, no explanations)`
           }
         ],
-        temperature: 0.8,
-        max_tokens: 2000
+        temperature: 0.75,
+        max_tokens: 3000
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -327,7 +519,28 @@ export const analyzeActivityQuality = async (activity: AIGeneratedActivity): Pro
       messages: [
         {
           role: "system",
-          content: "You are an expert early childhood education evaluator. Analyze the quality of educational activities and provide scores and suggestions. Always respond with valid JSON only."
+          content: `You are an elite early childhood education evaluator with expertise in:
+- Developmentally appropriate practice (NAEYC standards)
+- Activity design quality and educational effectiveness
+- Engagement optimization and child-centered learning
+- Inclusive design and accessibility
+- Evidence-based early childhood pedagogy
+
+EVALUATION CRITERIA:
+1. ENGAGEMENT (1-10): Does the activity capture and maintain attention? Is it intrinsically motivating?
+2. EDUCATIONAL VALUE (1-10): Does it clearly support learning objectives? Is it pedagogically sound?
+3. CLARITY (1-10): Are instructions clear? Can caregivers easily implement it?
+4. ADAPTABILITY (1-10): Can it be modified for different needs while maintaining integrity?
+
+PROVIDE:
+- Overall score (0-100): weighted average considering all criteria
+- Individual scores for each criterion (1-10)
+- Constructive, specific suggestions for improvement (3-5 actionable items)
+- Balance praise with areas for growth
+- Be specific: "add more visual supports" not "improve materials"
+- Consider developmental appropriateness and practical feasibility
+
+Always respond with valid JSON only.`
         },
         {
           role: "user",
