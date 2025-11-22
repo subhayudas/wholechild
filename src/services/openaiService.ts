@@ -5,6 +5,7 @@ import type {
   QualityAnalysis,
   VariationType
 } from '../../shared/schemas';
+import { methodologies, environments } from '../config/activityConfig';
 
 // Initialize OpenAI client with API key from environment
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -227,15 +228,17 @@ export const generateBulkActivities = async (
         modifiedRequest.childProfile.age = 3 + i;
         break;
       case 'methodology':
-        const methodologies = ['montessori', 'reggio', 'waldorf', 'highscope', 'bankstreet'];
-        modifiedRequest.methodologies = [methodologies[i % methodologies.length]];
+        // Use methodologies from centralized config
+        const methodologyIds = methodologies.map(m => m.id || m.value);
+        modifiedRequest.methodologies = [methodologyIds[i % methodologyIds.length]];
         break;
       case 'age':
         modifiedRequest.childProfile.age = 3 + (i % 3);
         break;
       case 'environment':
-        const environments = ['indoor', 'outdoor', 'both'];
-        modifiedRequest.environment = environments[i % environments.length];
+        // Use environments from centralized config
+        const environmentIds = environments.map(e => e.id);
+        modifiedRequest.environment = environmentIds[i % environmentIds.length];
         break;
     }
 

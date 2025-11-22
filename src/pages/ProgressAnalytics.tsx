@@ -62,6 +62,8 @@ const ProgressAnalytics = () => {
     { id: 'year', label: 'This Year', days: 365 }
   ];
 
+  // Developmental areas - using standard areas from child profile structure
+  // These match the developmentalProfile keys in the Child interface
   const developmentalAreas = [
     { id: 'cognitive', label: 'Cognitive', icon: Brain, color: 'blue' },
     { id: 'language', label: 'Language', icon: Music, color: 'green' },
@@ -69,6 +71,7 @@ const ProgressAnalytics = () => {
     { id: 'physical', label: 'Physical', icon: Target, color: 'orange' },
     { id: 'creative', label: 'Creative', icon: Palette, color: 'pink' }
   ];
+  // Note: These are UI configuration for the analytics page, matching the Child.developmentalProfile structure
 
   // Fetch all data when component mounts or activeChild changes
   useEffect(() => {

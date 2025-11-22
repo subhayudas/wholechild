@@ -258,29 +258,118 @@ const ParentActivityGuide: React.FC<ParentActivityGuideProps> = ({
     }
   };
 
-  const handleTakePhoto = () => {
-    // In a real app, this would open camera
-    const mockPhotoUrl = `https://images.pexels.com/photos/8613089/pexels-photo-8613089.jpeg?t=${Date.now()}`;
-    setSessionData(prev => ({
-      ...prev,
-      photos: [...prev.photos, mockPhotoUrl]
-    }));
-    toast.success('Photo captured! 📸');
+  const handleTakePhoto = async () => {
+    try {
+      // Try to access device camera
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      
+      // Create canvas to capture photo
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      video.addEventListener('loadedmetadata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx?.drawImage(video, 0, 0);
+        
+        // Convert to blob and create object URL
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const photoUrl = URL.createObjectURL(blob);
+            setSessionData(prev => ({
+              ...prev,
+              photos: [...prev.photos, photoUrl]
+            }));
+            toast.success('Photo captured! 📸');
+          }
+          
+          // Stop camera stream
+          stream.getTracks().forEach(track => track.stop());
+        }, 'image/jpeg', 0.8);
+      });
+    } catch (error) {
+      // Fallback: use file input if camera access fails
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          const photoUrl = URL.createObjectURL(file);
+          setSessionData(prev => ({
+            ...prev,
+            photos: [...prev.photos, photoUrl]
+          }));
+          toast.success('Photo captured! 📸');
+        }
+      };
+      input.click();
+    }
   };
 
-  const handleStartRecording = () => {
-    setIsRecording(true);
-    // In a real app, this would start audio/video recording
-    setTimeout(() => {
+  const handleStartRecording = async () => {
+    try {
+      setIsRecording(true);
+      
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setSessionData(prev => ({
+          ...prev,
+          audioNotes: [...prev.audioNotes, audioUrl]
+        }));
+        toast.success('Recording saved! 🎤');
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      
+      // Stop recording after 10 seconds or when user clicks again
+      const stopRecording = () => {
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+        setIsRecording(false);
+      };
+      
+      // Store stop function for later use
+      (window as any).stopCurrentRecording = stopRecording;
+      
+      // Auto-stop after 30 seconds
+      setTimeout(stopRecording, 30000);
+      
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast.error('Could not access microphone. Please check permissions.');
       setIsRecording(false);
-      const mockRecording = `recording_${Date.now()}.mp3`;
-      setSessionData(prev => ({
-        ...prev,
-        audioNotes: [...prev.audioNotes, mockRecording]
-      }));
-      toast.success('Recording saved! 🎤');
-    }, 3000);
+    }
   };
+  
+  // Add handler to stop recording
+  useEffect(() => {
+    return () => {
+      if ((window as any).stopCurrentRecording) {
+        (window as any).stopCurrentRecording();
+      }
+    };
+  }, []);
 
   const addObservation = (observation: string) => {
     setSessionData(prev => ({
@@ -441,8 +530,13 @@ const ParentActivityGuide: React.FC<ParentActivityGuideProps> = ({
       </motion.button>
       
       <motion.button
-        onClick={handleStartRecording}
-        disabled={isRecording}
+        onClick={() => {
+          if (isRecording && (window as any).stopCurrentRecording) {
+            (window as any).stopCurrentRecording();
+          } else {
+            handleStartRecording();
+          }
+        }}
         className={`p-4 rounded-xl text-center transition-colors ${
           isRecording 
             ? 'bg-red-100 text-red-600' 
@@ -453,7 +547,7 @@ const ParentActivityGuide: React.FC<ParentActivityGuideProps> = ({
       >
         <Mic className={`w-6 h-6 mx-auto mb-2 ${isRecording ? 'animate-pulse' : ''}`} />
         <span className="text-sm font-medium">
-          {isRecording ? 'Recording...' : 'Voice Note'}
+          {isRecording ? 'Stop Recording' : 'Voice Note'}
         </span>
       </motion.button>
       

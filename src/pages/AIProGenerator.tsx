@@ -60,6 +60,7 @@ import {
 import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
 import { generateActivityWithAI, AIGenerationRequest, AIGeneratedActivity, testOpenAIConnection } from '../services/openaiService';
+import { categories, methodologies } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 const AIProGenerator = () => {
@@ -222,19 +223,7 @@ const AIProGenerator = () => {
     { value: 'sensory', label: 'Sensory Play', icon: Hand, color: 'from-teal-500 to-cyan-500' }
   ];
 
-  const categories = [
-    'Art & Craft', 'Music & Movement', 'Science Exploration', 'Math Concepts',
-    'Reading & Writing', 'Dramatic Play', 'Outdoor Adventure', 'Cooking & Nutrition',
-    'Building & Construction', 'Nature Study', 'Cultural Awareness', 'Life Skills'
-  ];
-
-  const methodologies = [
-    { value: 'montessori', label: 'Montessori', description: 'Self-directed learning with structured materials' },
-    { value: 'reggio', label: 'Reggio Emilia', description: 'Project-based exploration and documentation' },
-    { value: 'waldorf', label: 'Waldorf', description: 'Artistic expression and natural rhythms' },
-    { value: 'highscope', label: 'HighScope', description: 'Plan-do-review sequence with active learning' },
-    { value: 'play-based', label: 'Play-Based', description: 'Learning through structured and unstructured play' }
-  ];
+  // Categories and methodologies imported from centralized config
 
   return (
     <div className="min-h-screen bg-white">

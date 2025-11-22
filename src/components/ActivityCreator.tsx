@@ -19,6 +19,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import { Activity, useActivityStore } from '../store/activityStore';
+import { methodologies, categories, developmentalAreas } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 interface ActivityCreatorProps {
@@ -88,33 +89,7 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
     { title: 'Review', icon: CheckCircle }
   ];
 
-  const methodologies = [
-    { id: 'montessori', name: 'Montessori', icon: Target, color: 'from-blue-500 to-blue-600' },
-    { id: 'reggio', name: 'Reggio Emilia', icon: Camera, color: 'from-green-500 to-green-600' },
-    { id: 'waldorf', name: 'Waldorf', icon: Music, color: 'from-purple-500 to-purple-600' },
-    { id: 'highscope', name: 'HighScope', icon: Brain, color: 'from-orange-500 to-orange-600' },
-    { id: 'bankstreet', name: 'Bank Street', icon: Users, color: 'from-pink-500 to-pink-600' }
-  ];
-
-  const categories = [
-    'Math & Logic',
-    'Language & Literacy',
-    'Science & Nature',
-    'Art & Creativity',
-    'Music & Movement',
-    'Social Skills',
-    'Life Skills',
-    'Sensory Play'
-  ];
-
-  const developmentalAreas = [
-    'Cognitive',
-    'Language',
-    'Physical',
-    'Social',
-    'Creative',
-    'Emotional'
-  ];
+  // Methodologies, categories, and developmental areas imported from centralized config
 
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));

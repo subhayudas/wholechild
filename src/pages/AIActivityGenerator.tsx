@@ -44,6 +44,7 @@ import {
 import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
 import { generateActivityWithAI, AIGenerationRequest, AIGeneratedActivity, testOpenAIConnection } from '../services/openaiService';
+import { activityTypes, categories, methodologies, environments, materialConstraints } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 const AIActivityGenerator = () => {
@@ -144,45 +145,6 @@ const AIActivityGenerator = () => {
     }
   }, [activeChild]);
 
-  const activityTypes = [
-    { id: 'sensory-play', name: 'Sensory Play', icon: Heart, color: 'from-pink-500 to-rose-500', description: 'Tactile and sensory exploration' },
-    { id: 'art-craft', name: 'Art & Craft', icon: Palette, color: 'from-purple-500 to-indigo-500', description: 'Creative expression and fine motor' },
-    { id: 'music-movement', name: 'Music & Movement', icon: Music, color: 'from-blue-500 to-cyan-500', description: 'Rhythm, dance, and gross motor' },
-    { id: 'science-experiment', name: 'Science Experiment', icon: Zap, color: 'from-yellow-500 to-orange-500', description: 'Discovery and investigation' },
-    { id: 'dramatic-play', name: 'Dramatic Play', icon: Users, color: 'from-green-500 to-emerald-500', description: 'Role-playing and social skills' },
-    { id: 'building-construction', name: 'Building & Construction', icon: Gamepad2, color: 'from-gray-500 to-slate-500', description: 'Spatial and engineering skills' },
-    { id: 'literacy-language', name: 'Literacy & Language', icon: BookOpen, color: 'from-indigo-500 to-blue-500', description: 'Reading, writing, and communication' },
-    { id: 'math-logic', name: 'Math & Logic', icon: Calculator, color: 'from-teal-500 to-cyan-500', description: 'Numbers, patterns, and problem-solving' },
-    { id: 'nature-outdoor', name: 'Nature & Outdoor', icon: TreePine, color: 'from-green-600 to-emerald-600', description: 'Environmental exploration' },
-    { id: 'cooking-nutrition', name: 'Cooking & Nutrition', icon: Utensils, color: 'from-orange-500 to-red-500', description: 'Life skills and healthy habits' }
-  ];
-
-  const categories = [
-    'Math & Logic', 'Language & Literacy', 'Science & Nature', 'Art & Creativity',
-    'Music & Movement', 'Social Skills', 'Life Skills', 'Sensory Play'
-  ];
-
-  const methodologies = [
-    { id: 'montessori', name: 'Montessori', description: 'Self-directed learning with structured materials' },
-    { id: 'reggio', name: 'Reggio Emilia', description: 'Project-based exploration and documentation' },
-    { id: 'waldorf', name: 'Waldorf', description: 'Artistic expression and natural rhythms' },
-    { id: 'highscope', name: 'HighScope', description: 'Plan-do-review active learning sequence' },
-    { id: 'bankstreet', name: 'Bank Street', description: 'Social-emotional development focus' },
-    { id: 'play-based', name: 'Play-Based', description: 'Learning through structured play' },
-    { id: 'inquiry-based', name: 'Inquiry-Based', description: 'Question-driven exploration' }
-  ];
-
-  const environments = [
-    { id: 'indoor', name: 'Indoor', icon: Home },
-    { id: 'outdoor', name: 'Outdoor', icon: TreePine },
-    { id: 'both', name: 'Both', icon: Globe }
-  ];
-
-  const materialConstraints = [
-    'Household items only', 'Under $10 budget', 'No small parts (choking hazard)',
-    'Washable materials', 'Natural materials preferred', 'Minimal cleanup required',
-    'Reusable materials', 'No electronics needed'
-  ];
 
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));

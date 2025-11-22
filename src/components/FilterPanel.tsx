@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X, RotateCcw } from 'lucide-react';
+import { categories, developmentalAreas } from '../config/activityConfig';
 
 interface FilterPanelProps {
   filters: {
@@ -16,25 +17,7 @@ interface FilterPanelProps {
 }
 
 const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, onClose }) => {
-  const categories = [
-    'Math & Logic',
-    'Language & Literacy',
-    'Science & Nature',
-    'Art & Creativity',
-    'Music & Movement',
-    'Social Skills',
-    'Life Skills',
-    'Sensory Play'
-  ];
-
-  const developmentalAreas = [
-    'Cognitive',
-    'Language',
-    'Physical',
-    'Social',
-    'Creative',
-    'Emotional'
-  ];
+  // Categories and developmental areas imported from centralized config
 
   const resetFilters = () => {
     onFiltersChange({

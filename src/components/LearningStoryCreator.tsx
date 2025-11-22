@@ -27,6 +27,7 @@ import {
 import { LearningStory, useLearningStoryStore } from '../store/learningStoryStore';
 import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
+import { developmentalAreas, methodologies, shareOptions } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 interface LearningStoryCreatorProps {
@@ -84,33 +85,7 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
     { title: 'Share & Save', icon: Share2 }
   ];
 
-  const developmentalAreas = [
-    'Cognitive Development',
-    'Language & Communication',
-    'Physical Development',
-    'Social-Emotional',
-    'Creative Expression',
-    'Mathematical Thinking',
-    'Scientific Inquiry',
-    'Cultural Understanding'
-  ];
-
-  const methodologies = [
-    { id: 'montessori', name: 'Montessori', icon: Target, color: 'blue' },
-    { id: 'reggio', name: 'Reggio Emilia', icon: Camera, color: 'green' },
-    { id: 'waldorf', name: 'Waldorf', icon: Music, color: 'purple' },
-    { id: 'highscope', name: 'HighScope', icon: Brain, color: 'orange' },
-    { id: 'bankstreet', name: 'Bank Street', icon: Users, color: 'pink' }
-  ];
-
-  const shareOptions = [
-    'Family Members',
-    'Teachers',
-    'Therapists',
-    'Grandparents',
-    'Care Team',
-    'Portfolio'
-  ];
+  // Developmental areas, methodologies, and share options imported from centralized config
 
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));

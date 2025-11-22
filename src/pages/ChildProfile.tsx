@@ -73,7 +73,13 @@ const ChildProfile = () => {
   }, [isAuthenticated, fetchChildren]);
 
   const childStories = activeChild ? getStoriesForChild(activeChild.id) : [];
-  const recentActivities = activities.slice(0, 5); // Mock recent activities
+  const recentActivities = activeChild 
+    ? activeChild.activityHistory
+        .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+        .slice(0, 5)
+        .map(ah => activities.find(a => a.id === ah.activityId))
+        .filter(Boolean)
+    : [];
 
   const developmentalAreas = [
     { 
@@ -123,22 +129,75 @@ const ChildProfile = () => {
     }
   ];
 
-  // Sample data for charts
-  const progressData = [
-    { month: 'Jan', cognitive: 65, language: 70, social: 60, physical: 75, creative: 55 },
-    { month: 'Feb', cognitive: 68, language: 72, social: 62, physical: 77, creative: 58 },
-    { month: 'Mar', cognitive: 72, language: 75, social: 65, physical: 80, creative: 62 },
-    { month: 'Apr', cognitive: 75, language: 78, social: 68, physical: 82, creative: 65 },
-    { month: 'May', cognitive: 78, language: 82, social: 70, physical: 85, creative: 68 },
-    { month: 'Jun', cognitive: 82, language: 85, social: 73, physical: 88, creative: 72 }
-  ];
+  // Calculate progress data from real activity history
+  const calculateProgressData = () => {
+    if (!activeChild || !activities.length) return [];
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+    
+    return months.slice(Math.max(0, now.getMonth() - 5), now.getMonth() + 1).map((month, index) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - (5 - index) + 1, 0);
+      
+      const monthActivities = activeChild.activityHistory.filter(activity => {
+        const activityDate = new Date(activity.completedAt);
+        return activityDate >= monthStart && activityDate <= monthEnd;
+      });
+      
+      // Calculate progress based on activities completed
+      const baseProgress = activeChild.developmentalProfile;
+      const progressIncrement = monthActivities.length * 2; // Small increment per activity
+      
+      return {
+        month,
+        cognitive: Math.min(100, baseProgress.cognitive + (progressIncrement * index)),
+        language: Math.min(100, baseProgress.language + (progressIncrement * index)),
+        social: Math.min(100, baseProgress.social + (progressIncrement * index)),
+        physical: Math.min(100, baseProgress.physical + (progressIncrement * index)),
+        creative: Math.min(100, baseProgress.creative + (progressIncrement * index))
+      };
+    });
+  };
+  
+  const progressData = calculateProgressData();
 
-  const activityData = [
-    { name: 'Cognitive', value: 35, color: '#3b82f6' },
-    { name: 'Language', value: 25, color: '#10b981' },
-    { name: 'Social', value: 20, color: '#8b5cf6' },
-    { name: 'Physical', value: 20, color: '#f59e0b' }
-  ];
+  // Calculate activity distribution from real activities
+  const calculateActivityData = () => {
+    if (!activeChild || !activities.length) return [];
+    
+    const distribution: Record<string, number> = {};
+    activeChild.activityHistory.forEach(activity => {
+      const activityData = activities.find(a => a.id === activity.activityId);
+      if (activityData && activityData.developmentalAreas.length > 0) {
+        activityData.developmentalAreas.forEach((area: string) => {
+          const areaName = area.charAt(0).toUpperCase() + area.slice(1);
+          distribution[areaName] = (distribution[areaName] || 0) + 1;
+        });
+      }
+    });
+    
+    const colors: Record<string, string> = {
+      'Cognitive': '#3b82f6',
+      'Language': '#10b981',
+      'Social': '#8b5cf6',
+      'Physical': '#f59e0b',
+      'Creative': '#ef4444'
+    };
+    
+    const total = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+    if (total === 0) return [];
+    
+    return Object.entries(distribution).map(([name, count]) => ({
+      name,
+      value: Math.round((count / total) * 100),
+      color: colors[name] || '#6b7280'
+    }));
+  };
+  
+  const activityData = calculateActivityData();
 
   // Radar chart data for development overview
   const radarData = developmentalAreas.map(area => ({
@@ -148,26 +207,57 @@ const ChildProfile = () => {
     fullMark: 100
   }));
 
-  // Scatter plot data for skill correlation
-  const scatterData = [
-    { x: 75, y: 82, name: 'Reading', size: 120 },
-    { x: 68, y: 78, name: 'Writing', size: 100 },
-    { x: 85, y: 88, name: 'Math', size: 140 },
-    { x: 72, y: 75, name: 'Science', size: 110 },
-    { x: 90, y: 85, name: 'Art', size: 95 },
-    { x: 78, y: 80, name: 'Music', size: 105 },
-    { x: 82, y: 84, name: 'Sports', size: 130 }
-  ];
+  // Calculate scatter plot data from current level and interests
+  const calculateScatterData = () => {
+    if (!activeChild) return [];
+    
+    const subjects = Object.keys(activeChild.currentLevel);
+    return subjects.map(subject => {
+      const level = activeChild.currentLevel[subject as keyof typeof activeChild.currentLevel];
+      const hasInterest = activeChild.interests.some(i => 
+        i.toLowerCase().includes(subject.toLowerCase())
+      );
+      
+      return {
+        x: level * 20, // Convert 1-5 scale to percentage
+        y: hasInterest ? 85 : 70, // Interest level
+        name: subject.charAt(0).toUpperCase() + subject.slice(1),
+        size: 100 + (level * 10)
+      };
+    });
+  };
+  
+  const scatterData = calculateScatterData();
 
-  // Composed chart data for progress vs engagement
-  const composedData = [
-    { month: 'Jan', progress: 65, engagement: 70, activities: 12 },
-    { month: 'Feb', progress: 68, engagement: 75, activities: 15 },
-    { month: 'Mar', progress: 72, engagement: 72, activities: 18 },
-    { month: 'Apr', progress: 75, engagement: 80, activities: 20 },
-    { month: 'May', progress: 78, engagement: 85, activities: 22 },
-    { month: 'Jun', progress: 82, engagement: 88, activities: 25 }
-  ];
+  // Calculate composed chart data from activity history
+  const calculateComposedData = () => {
+    if (!activeChild) return [];
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const now = new Date();
+    
+    return months.slice(Math.max(0, now.getMonth() - 5), now.getMonth() + 1).map((month, index) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - (5 - index) + 1, 0);
+      
+      const monthActivities = activeChild.activityHistory.filter(activity => {
+        const activityDate = new Date(activity.completedAt);
+        return activityDate >= monthStart && activityDate <= monthEnd;
+      });
+      
+      const avgProgress = Object.values(activeChild.developmentalProfile).reduce((sum, val) => sum + val, 0) / 5;
+      const engagement = Math.min(100, 60 + (monthActivities.length * 3));
+      
+      return {
+        month,
+        progress: Math.round(avgProgress + (index * 2)),
+        engagement: Math.round(engagement),
+        activities: monthActivities.length
+      };
+    });
+  };
+  
+  const composedData = calculateComposedData();
 
   const handleCreateProfile = () => {
     setEditingChild(null);
@@ -377,27 +467,43 @@ const ChildProfile = () => {
                   </div>
                 </div>
                 <div className="text-center p-4 border-r border-b border-gray-200 bg-gray-50/30">
-                  <div className="text-2xl font-semibold text-gray-900">24</div>
+                  <div className="text-2xl font-semibold text-gray-900">{activeChild.activityHistory.length}</div>
                   <div className="text-sm text-gray-500">Activities Done</div>
                   <div className="flex items-center justify-center mt-1">
-                    <ChevronUp className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-500">+5</span>
+                    {activeChild.activityHistory.length > 0 && (
+                      <>
+                        <ChevronUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-500">Active</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="text-center p-4 border-r border-b border-gray-200 bg-gray-50/30">
-                  <div className="text-2xl font-semibold text-gray-900">87%</div>
+                  <div className="text-2xl font-semibold text-gray-900">
+                    {Math.round(
+                      (Object.values(activeChild.developmentalProfile).reduce((sum, val) => sum + val, 0) / 5)
+                    )}%
+                  </div>
                   <div className="text-sm text-gray-500">Progress Rate</div>
                   <div className="flex items-center justify-center mt-1">
-                    <ChevronUp className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-500">+2%</span>
+                    {Object.values(activeChild.developmentalProfile).some(v => v > 0) && (
+                      <>
+                        <ChevronUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-500">Active</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="text-center p-4 border-b border-gray-200 bg-gray-50/30">
-                  <div className="text-2xl font-semibold text-gray-900">12</div>
-                  <div className="text-sm text-gray-500">Milestones</div>
+                  <div className="text-2xl font-semibold text-gray-900">{activeChild.achievements.length}</div>
+                  <div className="text-sm text-gray-500">Achievements</div>
                   <div className="flex items-center justify-center mt-1">
-                    <ChevronUp className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-500">+1</span>
+                    {activeChild.achievements.length > 0 && (
+                      <>
+                        <ChevronUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs text-green-500">Active</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -701,29 +807,6 @@ const ChildProfile = () => {
                 </div>
               </motion.div>
 
-              {/* Academic Levels - 3 columns */}
-              <motion.div
-                className="col-span-3 border-b border-gray-200 p-4 bg-gray-50/30"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.9 }}
-              >
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Academic Levels</h3>
-                <div className="space-y-0">
-                  <div className="flex justify-between items-center p-2 border-b border-gray-100 bg-white">
-                    <span className="text-sm text-gray-600">Reading</span>
-                    <span className="text-sm font-medium text-gray-900">Grade 2</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 border-b border-gray-100 bg-white">
-                    <span className="text-sm text-gray-600">Math</span>
-                    <span className="text-sm font-medium text-gray-900">Grade 1</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 bg-white">
-                    <span className="text-sm text-gray-600">Writing</span>
-                    <span className="text-sm font-medium text-gray-900">Grade 2</span>
-                  </div>
-                </div>
-              </motion.div>
 
               {/* Goals - 6 columns */}
               <motion.div

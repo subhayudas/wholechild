@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Lock
 } from 'lucide-react';
+import { badgeDefinitions, rewardDefinitions } from '../config/activityConfig';
 
 interface ChildRewardSystemProps {
   points: number;
@@ -30,111 +31,42 @@ const ChildRewardSystem: React.FC<ChildRewardSystemProps> = ({
   streak,
   onClose
 }) => {
-  const badges = [
-    {
-      id: 'first-steps',
-      name: 'First Steps',
-      description: 'Complete your first activity!',
-      icon: <Star className="w-8 h-8" />,
-      color: 'from-yellow-400 to-orange-500',
-      requirement: 1,
-      unlocked: unlockedRewards.includes('first-steps')
-    },
-    {
-      id: 'rainbow-badge',
-      name: 'Rainbow Explorer',
-      description: 'Learn about colors!',
-      icon: <Rainbow className="w-8 h-8" />,
-      color: 'from-pink-400 to-purple-500',
-      requirement: 50,
-      unlocked: unlockedRewards.includes('rainbow-badge')
-    },
-    {
-      id: 'star-collector',
-      name: 'Star Collector',
-      description: 'Collect 100 learning stars!',
-      icon: <Sparkles className="w-8 h-8" />,
-      color: 'from-blue-400 to-cyan-500',
-      requirement: 100,
-      unlocked: unlockedRewards.includes('star-collector')
-    },
-    {
-      id: 'super-learner',
-      name: 'Super Learner',
-      description: 'Reach 200 learning stars!',
-      icon: <Crown className="w-8 h-8" />,
-      color: 'from-purple-500 to-pink-500',
-      requirement: 200,
-      unlocked: unlockedRewards.includes('super-learner')
-    },
-    {
-      id: 'streak-master',
-      name: 'Streak Master',
-      description: 'Learn for 7 days in a row!',
-      icon: <Zap className="w-8 h-8" />,
-      color: 'from-green-400 to-blue-500',
-      requirement: 7,
-      unlocked: streak >= 7
-    },
-    {
-      id: 'creative-genius',
-      name: 'Creative Genius',
-      description: 'Complete 5 art activities!',
-      icon: <Flower className="w-8 h-8" />,
-      color: 'from-pink-500 to-red-500',
-      requirement: 5,
-      unlocked: false
-    },
-    {
-      id: 'music-maestro',
-      name: 'Music Maestro',
-      description: 'Complete 5 music activities!',
-      icon: <Sun className="w-8 h-8" />,
-      color: 'from-yellow-500 to-orange-500',
-      requirement: 5,
-      unlocked: false
-    },
-    {
-      id: 'night-owl',
-      name: 'Night Owl',
-      description: 'Complete an evening activity!',
-      icon: <Moon className="w-8 h-8" />,
-      color: 'from-indigo-500 to-purple-500',
-      requirement: 1,
-      unlocked: false
-    }
-  ];
+  // Map badge definitions to component format with icons
+  const iconMap: Record<string, React.ReactNode> = {
+    'first-steps': <Star className="w-8 h-8" />,
+    'rainbow-badge': <Rainbow className="w-8 h-8" />,
+    'star-collector': <Sparkles className="w-8 h-8" />,
+    'super-learner': <Crown className="w-8 h-8" />,
+    'streak-master': <Zap className="w-8 h-8" />,
+    'creative-genius': <Flower className="w-8 h-8" />,
+    'music-maestro': <Sun className="w-8 h-8" />,
+    'night-owl': <Moon className="w-8 h-8" />
+  };
 
-  const rewards = [
-    {
-      id: 'unicorn-avatar',
-      name: 'Unicorn Avatar',
-      description: 'A magical unicorn for your profile!',
-      cost: 100,
-      unlocked: points >= 100
-    },
-    {
-      id: 'rainbow-theme',
-      name: 'Rainbow Theme',
-      description: 'Make everything colorful!',
-      cost: 150,
-      unlocked: points >= 150
-    },
-    {
-      id: 'star-trail',
-      name: 'Star Trail Effect',
-      description: 'Leave sparkles wherever you go!',
-      cost: 200,
-      unlocked: points >= 200
-    },
-    {
-      id: 'pet-dragon',
-      name: 'Pet Dragon',
-      description: 'A friendly dragon companion!',
-      cost: 300,
-      unlocked: points >= 300
-    }
-  ];
+  const colorMap: Record<string, string> = {
+    'first-steps': 'from-yellow-400 to-orange-500',
+    'rainbow-badge': 'from-pink-400 to-purple-500',
+    'star-collector': 'from-blue-400 to-cyan-500',
+    'super-learner': 'from-purple-500 to-pink-500',
+    'streak-master': 'from-green-400 to-blue-500',
+    'creative-genius': 'from-pink-500 to-red-500',
+    'music-maestro': 'from-yellow-500 to-orange-500',
+    'night-owl': 'from-indigo-500 to-purple-500'
+  };
+
+  const badges = badgeDefinitions.map(badge => ({
+    ...badge,
+    icon: iconMap[badge.id] || <Star className="w-8 h-8" />,
+    color: colorMap[badge.id] || 'from-gray-400 to-gray-500',
+    unlocked: badge.requirementType === 'streak' 
+      ? streak >= badge.requirement
+      : unlockedRewards.includes(badge.id)
+  }));
+
+  const rewards = rewardDefinitions.map(reward => ({
+    ...reward,
+    unlocked: points >= reward.cost
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-yellow-100 p-4">

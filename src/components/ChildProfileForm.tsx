@@ -19,6 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { Child, useChildStore } from '../store/childStore';
+import { interestOptions, sensoryNeedsOptions } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 interface ChildProfileFormProps {
@@ -118,17 +119,7 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
     { title: 'Review', icon: Check }
   ];
 
-  const interestOptions = [
-    'Art & Drawing', 'Music & Singing', 'Building & Construction', 'Nature & Animals',
-    'Books & Stories', 'Puzzles & Games', 'Sports & Movement', 'Science & Experiments',
-    'Cooking & Baking', 'Dancing', 'Technology', 'Dramatic Play'
-  ];
-
-  const sensoryNeedsOptions = [
-    'Movement breaks', 'Quiet spaces', 'Tactile input', 'Deep pressure',
-    'Visual supports', 'Noise reduction', 'Fidget tools', 'Weighted items',
-    'Sensory bins', 'Calming music', 'Bright lighting', 'Dim lighting'
-  ];
+  // Interest options and sensory needs options imported from centralized config
 
   const updateFormData = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));

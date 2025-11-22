@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckCircle, 
@@ -11,9 +11,12 @@ import {
   Plus,
   Edit3,
   Trash2,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { Child } from '../store/childStore';
+import { milestonesService, Milestone } from '../services/milestonesService';
+import toast from 'react-hot-toast';
 
 interface MilestoneTrackerProps {
   child: Child | null;
@@ -28,70 +31,33 @@ interface MilestoneTrackerProps {
 const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ child, developmentalAreas }) => {
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [showAddMilestone, setShowAddMilestone] = useState(false);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
 
-  // Mock milestone data - in a real app this would come from the store
-  const milestones = [
-    {
-      id: '1',
-      title: 'Sorts objects by color',
-      description: 'Can independently sort 5+ colors without assistance',
-      area: 'cognitive',
-      targetAge: 48, // months
-      achieved: true,
-      achievedDate: new Date('2025-01-10'),
-      importance: 'high'
-    },
-    {
-      id: '2',
-      title: 'Uses 3-word sentences',
-      description: 'Consistently uses sentences with 3 or more words',
-      area: 'language',
-      targetAge: 36,
-      achieved: true,
-      achievedDate: new Date('2024-12-15'),
-      importance: 'high'
-    },
-    {
-      id: '3',
-      title: 'Plays cooperatively',
-      description: 'Engages in cooperative play with peers for 10+ minutes',
-      area: 'social',
-      targetAge: 42,
-      achieved: false,
-      targetDate: new Date('2025-03-01'),
-      importance: 'medium'
-    },
-    {
-      id: '4',
-      title: 'Hops on one foot',
-      description: 'Can hop on one foot for 3+ consecutive hops',
-      area: 'physical',
-      targetAge: 54,
-      achieved: false,
-      targetDate: new Date('2025-06-01'),
-      importance: 'medium'
-    },
-    {
-      id: '5',
-      title: 'Draws recognizable shapes',
-      description: 'Can draw circles, squares, and triangles that are recognizable',
-      area: 'creative',
-      targetAge: 48,
-      achieved: true,
-      achievedDate: new Date('2025-01-05'),
-      importance: 'medium'
-    },
-    {
-      id: '6',
-      title: 'Counts to 10',
-      description: 'Can count from 1 to 10 without skipping numbers',
-      area: 'cognitive',
-      targetAge: 45,
-      achieved: false,
-      targetDate: new Date('2025-02-15'),
-      importance: 'high'
-    }
-  ];
+  // Fetch milestones from database
+  useEffect(() => {
+    const fetchMilestones = async () => {
+      if (!child) {
+        setMilestones([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const fetchedMilestones = await milestonesService.getByChildId(child.id);
+        setMilestones(fetchedMilestones);
+      } catch (error: any) {
+        console.error('Error fetching milestones:', error);
+        toast.error('Failed to load milestones');
+        setMilestones([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMilestones();
+  }, [child]);
 
   const filteredMilestones = selectedArea === 'all' 
     ? milestones 
@@ -283,10 +249,27 @@ const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ child, developmenta
                         {milestone.importance}
                       </span>
                       <div className="flex gap-1">
-                        <button className="p-1 text-gray-400 hover:text-blue-600 transition-colors">
+                        <button 
+                          onClick={() => setEditingMilestone(milestone)}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+                        <button 
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this milestone?')) {
+                              try {
+                                await milestonesService.delete(milestone.id);
+                                const updated = await milestonesService.getByChildId(child!.id);
+                                setMilestones(updated);
+                                toast.success('Milestone deleted');
+                              } catch (error: any) {
+                                toast.error('Failed to delete milestone');
+                              }
+                            }
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -323,7 +306,19 @@ const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ child, developmenta
 
                   {!milestone.achieved && (
                     <div className="mt-4">
-                      <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await milestonesService.markAchieved(milestone.id);
+                            const updated = await milestonesService.getByChildId(child!.id);
+                            setMilestones(updated);
+                            toast.success('Milestone marked as achieved! 🎉');
+                          } catch (error: any) {
+                            toast.error('Failed to update milestone');
+                          }
+                        }}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
                         Mark as Achieved
                       </button>
                     </div>
@@ -335,7 +330,12 @@ const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ child, developmenta
         })}
       </div>
 
-      {filteredMilestones.length === 0 && (
+      {isLoading ? (
+        <div className="text-center py-12">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading milestones...</p>
+        </div>
+      ) : filteredMilestones.length === 0 ? (
         <div className="text-center py-12">
           <Target className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">No milestones found</h3>
@@ -352,8 +352,174 @@ const MilestoneTracker: React.FC<MilestoneTrackerProps> = ({ child, developmenta
             Add First Milestone
           </button>
         </div>
-      )}
+      ) : null}
+
+      {/* Add/Edit Milestone Modal */}
+      <AnimatePresence>
+        {(showAddMilestone || editingMilestone) && (
+          <MilestoneForm
+            child={child}
+            milestone={editingMilestone}
+            onClose={() => {
+              setShowAddMilestone(false);
+              setEditingMilestone(null);
+            }}
+            onSave={async () => {
+              if (child) {
+                const updated = await milestonesService.getByChildId(child.id);
+                setMilestones(updated);
+              }
+              setShowAddMilestone(false);
+              setEditingMilestone(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+};
+
+// Simple Milestone Form Component
+const MilestoneForm: React.FC<{
+  child: Child | null;
+  milestone?: Milestone | null;
+  onClose: () => void;
+  onSave: () => void;
+}> = ({ child, milestone, onClose, onSave }) => {
+  const [title, setTitle] = useState(milestone?.title || '');
+  const [description, setDescription] = useState(milestone?.description || '');
+  const [area, setArea] = useState<'cognitive' | 'language' | 'social' | 'physical' | 'creative'>(milestone?.area || 'cognitive');
+  const [targetAge, setTargetAge] = useState(milestone?.targetAge || 36);
+  const [importance, setImportance] = useState<'high' | 'medium' | 'low'>(milestone?.importance || 'medium');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!child) return;
+
+    setIsSaving(true);
+    try {
+      if (milestone) {
+        await milestonesService.update(milestone.id, {
+          title,
+          description,
+          area,
+          targetAge,
+          importance
+        });
+        toast.success('Milestone updated');
+      } else {
+        await milestonesService.create({
+          childId: child.id,
+          title,
+          description,
+          area,
+          targetAge,
+          importance
+        });
+        toast.success('Milestone created');
+      }
+      onSave();
+    } catch (error: any) {
+      toast.error('Failed to save milestone');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="bg-white rounded-xl p-6 max-w-md w-full"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-xl font-bold mb-4">{milestone ? 'Edit' : 'Add'} Milestone</h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              rows={3}
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Area</label>
+            <select
+              value={area}
+              onChange={(e) => setArea(e.target.value as any)}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="cognitive">Cognitive</option>
+              <option value="language">Language</option>
+              <option value="social">Social</option>
+              <option value="physical">Physical</option>
+              <option value="creative">Creative</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Target Age (months)</label>
+            <input
+              type="number"
+              value={targetAge}
+              onChange={(e) => setTargetAge(parseInt(e.target.value))}
+              className="w-full px-3 py-2 border rounded-lg"
+              min="0"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Importance</label>
+            <select
+              value={importance}
+              onChange={(e) => setImportance(e.target.value as any)}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 };
 
