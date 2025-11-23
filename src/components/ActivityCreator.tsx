@@ -128,6 +128,56 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
     updateFormData('developmentalAreas', newAreas);
   };
 
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 0: // Basic Info
+        if (!formData.title.trim()) {
+          toast.error('Please enter an activity title');
+          return false;
+        }
+        if (!formData.category || formData.category.trim() === '') {
+          toast.error('Please select a category');
+          return false;
+        }
+        return true;
+      
+      case 1: // Methodologies
+        if (formData.methodologies.length === 0) {
+          toast.error('Please select at least one methodology');
+          return false;
+        }
+        return true;
+      
+      case 2: // Materials & Instructions
+        const filteredMaterials = formData.materials.filter(m => m.trim());
+        const filteredInstructions = formData.instructions.filter(i => i.trim());
+        
+        if (filteredMaterials.length === 0) {
+          toast.error('Please add at least one material');
+          return false;
+        }
+        if (filteredInstructions.length === 0) {
+          toast.error('Please add at least one instruction');
+          return false;
+        }
+        return true;
+      
+      case 3: // Learning Goals - optional, always valid
+      case 4: // Adaptations - optional, always valid
+      case 5: // Review - always valid
+        return true;
+      
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.title.trim()) {
       toast.error('Please enter a title');
@@ -317,6 +367,11 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
                   const Icon = method.icon;
                   const isSelected = formData.methodologies.includes(method.id);
                   
+                  // Skip methodologies without icons or handle them gracefully
+                  if (!Icon) {
+                    return null;
+                  }
+                  
                   return (
                     <motion.button
                       key={method.id}
@@ -334,11 +389,15 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
                         <span className="font-semibold">{method.name}</span>
                       </div>
                       <p className={`text-sm ${isSelected ? 'text-white/90' : 'text-gray-600'}`}>
-                        {method.id === 'montessori' && 'Self-directed learning with structured materials'}
-                        {method.id === 'reggio' && 'Project-based exploration and documentation'}
-                        {method.id === 'waldorf' && 'Artistic expression and natural rhythms'}
-                        {method.id === 'highscope' && 'Plan-do-review active learning'}
-                        {method.id === 'bankstreet' && 'Social-emotional development focus'}
+                        {method.description || (
+                          <>
+                            {method.id === 'montessori' && 'Self-directed learning with structured materials'}
+                            {method.id === 'reggio' && 'Project-based exploration and documentation'}
+                            {method.id === 'waldorf' && 'Artistic expression and natural rhythms'}
+                            {method.id === 'highscope' && 'Plan-do-review active learning'}
+                            {method.id === 'bankstreet' && 'Social-emotional development focus'}
+                          </>
+                        )}
                       </p>
                     </motion.button>
                   );
@@ -756,15 +815,24 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
               
               return (
                 <div key={index} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-blue-600 border-blue-600 text-white' 
-                      : isCompleted
-                        ? 'bg-green-600 border-green-600 text-white'
-                        : 'border-gray-300 text-gray-400'
-                  }`}>
+                  <button
+                    onClick={() => {
+                      // Only allow going back to completed steps
+                      if (isCompleted || isActive) {
+                        setCurrentStep(index);
+                      }
+                    }}
+                    disabled={!isCompleted && !isActive}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-blue-600 border-blue-600 text-white cursor-pointer' 
+                        : isCompleted
+                          ? 'bg-green-600 border-green-600 text-white cursor-pointer hover:bg-green-700'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
                     <Icon className="w-5 h-5" />
-                  </div>
+                  </button>
                   <span className={`ml-2 text-sm font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
                   }`}>
@@ -809,7 +877,7 @@ const ActivityCreator: React.FC<ActivityCreatorProps> = ({ activity, onClose, on
               </motion.button>
             ) : (
               <button
-                onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                onClick={handleNext}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Next

@@ -188,6 +188,46 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
     }
   };
 
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 0: // Story Details
+        if (!formData.title.trim()) {
+          toast.error('Please enter a story title');
+          return false;
+        }
+        if (!formData.childId) {
+          toast.error('Please select a child');
+          return false;
+        }
+        return true;
+      
+      case 1: // Media Capture - optional, always valid
+        return true;
+      
+      case 2: // Observations
+        const hasObservations = formData.observations.some(o => o.trim());
+        if (!hasObservations) {
+          toast.error('Please add at least one observation');
+          return false;
+        }
+        return true;
+      
+      case 3: // Learning Analysis - optional, always valid
+      case 4: // Additional Notes - optional, always valid
+      case 5: // Share & Save - optional, always valid
+        return true;
+      
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.title.trim()) {
       toast.error('Please enter a story title');
@@ -550,13 +590,31 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
                   const Icon = method.icon;
                   const isSelected = formData.methodologyTags.includes(method.id);
                   
+                  // Skip methodologies without icons
+                  if (!Icon) {
+                    return null;
+                  }
+                  
+                  // Map color to Tailwind classes
+                  const colorMap: Record<string, string> = {
+                    'from-blue-500 to-blue-600': 'bg-blue-100 border-blue-300 text-blue-700',
+                    'from-green-500 to-green-600': 'bg-green-100 border-green-300 text-green-700',
+                    'from-purple-500 to-purple-600': 'bg-purple-100 border-purple-300 text-purple-700',
+                    'from-orange-500 to-orange-600': 'bg-orange-100 border-orange-300 text-orange-700',
+                    'from-pink-500 to-pink-600': 'bg-pink-100 border-pink-300 text-pink-700',
+                    'from-yellow-500 to-yellow-600': 'bg-yellow-100 border-yellow-300 text-yellow-700',
+                    'from-teal-500 to-teal-600': 'bg-teal-100 border-teal-300 text-teal-700'
+                  };
+                  
+                  const selectedClasses = colorMap[method.color] || 'bg-blue-100 border-blue-300 text-blue-700';
+                  
                   return (
                     <motion.button
                       key={method.id}
                       onClick={() => toggleMethodology(method.id)}
                       className={`p-4 rounded-lg border-2 transition-all duration-300 ${
                         isSelected
-                          ? `bg-${method.color}-100 border-${method.color}-300 text-${method.color}-700`
+                          ? selectedClasses
                           : 'bg-white border-gray-200 hover:border-gray-300'
                       }`}
                       whileHover={{ scale: 1.02 }}
@@ -700,15 +758,24 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
               
               return (
                 <div key={index} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-blue-600 border-blue-600 text-white' 
-                      : isCompleted
-                        ? 'bg-green-600 border-green-600 text-white'
-                        : 'border-gray-300 text-gray-400'
-                  }`}>
+                  <button
+                    onClick={() => {
+                      // Only allow going back to completed steps
+                      if (isCompleted || isActive) {
+                        setCurrentStep(index);
+                      }
+                    }}
+                    disabled={!isCompleted && !isActive}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-blue-600 border-blue-600 text-white cursor-pointer' 
+                        : isCompleted
+                          ? 'bg-green-600 border-green-600 text-white cursor-pointer hover:bg-green-700'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
                     <Icon className="w-5 h-5" />
-                  </div>
+                  </button>
                   <span className={`ml-2 text-sm font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
                   }`}>
@@ -763,7 +830,7 @@ const LearningStoryCreator: React.FC<LearningStoryCreatorProps> = ({ story, onCl
               </motion.button>
             ) : (
               <button
-                onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                onClick={handleNext}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Next

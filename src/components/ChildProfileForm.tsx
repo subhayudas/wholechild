@@ -167,6 +167,41 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
     updateFormData('sensoryNeeds', newNeeds.length ? newNeeds : ['']);
   };
 
+  const validateStep = (step: number): boolean => {
+    switch (step) {
+      case 0: // Basic Info
+        if (!formData.name.trim()) {
+          toast.error('Please enter the child\'s name');
+          return false;
+        }
+        return true;
+      
+      case 1: // Interests & Needs
+        const hasInterests = formData.interests.some(i => i.trim());
+        const hasSensoryNeeds = formData.sensoryNeeds.some(n => n.trim());
+        if (!hasInterests && !hasSensoryNeeds) {
+          toast.error('Please select at least one interest or sensory need');
+          return false;
+        }
+        return true;
+      
+      case 2: // Development - all fields have defaults, always valid
+      case 3: // Learning Style - all fields have defaults, always valid
+      case 4: // Goals & Support - optional fields, always valid
+      case 5: // Review - always valid
+        return true;
+      
+      default:
+        return true;
+    }
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(Math.min(steps.length - 1, currentStep + 1));
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error('Please enter a name');
@@ -640,15 +675,24 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
               
               return (
                 <div key={index} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-blue-600 border-blue-600 text-white' 
-                      : isCompleted
-                        ? 'bg-green-600 border-green-600 text-white'
-                        : 'border-gray-300 text-gray-400'
-                  }`}>
+                  <button
+                    onClick={() => {
+                      // Only allow going back to completed steps
+                      if (isCompleted || isActive) {
+                        setCurrentStep(index);
+                      }
+                    }}
+                    disabled={!isCompleted && !isActive}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-blue-600 border-blue-600 text-white cursor-pointer' 
+                        : isCompleted
+                          ? 'bg-green-600 border-green-600 text-white cursor-pointer hover:bg-green-700'
+                          : 'border-gray-300 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
                     <Icon className="w-5 h-5" />
-                  </div>
+                  </button>
                   <span className={`ml-2 text-sm font-medium ${
                     isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-gray-400'
                   }`}>
@@ -693,7 +737,7 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
               </motion.button>
             ) : (
               <button
-                onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+                onClick={handleNext}
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Next

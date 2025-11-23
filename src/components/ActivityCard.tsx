@@ -17,7 +17,7 @@ import {
   Music,
   Brain,
   User,
-  Lightbulb
+  Search
 } from 'lucide-react';
 import { Activity } from '../store/activityStore';
 
@@ -54,8 +54,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     waldorf: 'from-purple-500 to-purple-600',
     highscope: 'from-orange-500 to-orange-600',
     bankstreet: 'from-pink-500 to-pink-600',
-    'play-based': 'from-yellow-500 to-orange-600',
-    'inquiry-based': 'from-cyan-500 to-blue-600'
+    'play-based': 'from-yellow-500 to-yellow-600',
+    'inquiry-based': 'from-teal-500 to-teal-600'
   };
 
   const methodologyIcons = {
@@ -65,7 +65,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     highscope: Brain,
     bankstreet: Users,
     'play-based': Play,
-    'inquiry-based': Lightbulb
+    'inquiry-based': Search
   };
 
   const getDifficultyColor = (difficulty: number) => {

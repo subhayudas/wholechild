@@ -3,7 +3,8 @@
 
 import { 
   Heart, Palette, Music, Zap, Users, Gamepad2, BookOpen, 
-  Calculator, TreePine, Utensils, Target, Camera, Brain, Home, Globe 
+  Calculator, TreePine, Utensils, Target, Camera, Brain, Home, Globe, 
+  Play, Search
 } from 'lucide-react';
 
 export const activityTypes = [
@@ -31,13 +32,13 @@ export const categories = [
 ];
 
 export const methodologies = [
-  { id: 'montessori', name: 'Montessori', value: 'montessori', label: 'Montessori', description: 'Self-directed learning with structured materials', icon: Target, color: 'blue' },
-  { id: 'reggio', name: 'Reggio Emilia', value: 'reggio', label: 'Reggio Emilia', description: 'Project-based exploration and documentation', icon: Camera, color: 'green' },
-  { id: 'waldorf', name: 'Waldorf', value: 'waldorf', label: 'Waldorf', description: 'Artistic expression and natural rhythms', icon: Music, color: 'purple' },
-  { id: 'highscope', name: 'HighScope', value: 'highscope', label: 'HighScope', description: 'Plan-do-review active learning sequence', icon: Brain, color: 'orange' },
-  { id: 'bankstreet', name: 'Bank Street', value: 'bankstreet', label: 'Bank Street', description: 'Social-emotional development focus', icon: Users, color: 'pink' },
-  { id: 'play-based', name: 'Play-Based', value: 'play-based', label: 'Play-Based', description: 'Learning through structured play' },
-  { id: 'inquiry-based', name: 'Inquiry-Based', value: 'inquiry-based', label: 'Inquiry-Based', description: 'Question-driven exploration' }
+  { id: 'montessori', name: 'Montessori', value: 'montessori', label: 'Montessori', description: 'Self-directed learning with structured materials', icon: Target, color: 'from-blue-500 to-blue-600' },
+  { id: 'reggio', name: 'Reggio Emilia', value: 'reggio', label: 'Reggio Emilia', description: 'Project-based exploration and documentation', icon: Camera, color: 'from-green-500 to-green-600' },
+  { id: 'waldorf', name: 'Waldorf', value: 'waldorf', label: 'Waldorf', description: 'Artistic expression and natural rhythms', icon: Music, color: 'from-purple-500 to-purple-600' },
+  { id: 'highscope', name: 'HighScope', value: 'highscope', label: 'HighScope', description: 'Plan-do-review active learning sequence', icon: Brain, color: 'from-orange-500 to-orange-600' },
+  { id: 'bankstreet', name: 'Bank Street', value: 'bankstreet', label: 'Bank Street', description: 'Social-emotional development focus', icon: Users, color: 'from-pink-500 to-pink-600' },
+  { id: 'play-based', name: 'Play-Based', value: 'play-based', label: 'Play-Based', description: 'Learning through structured play', icon: Play, color: 'from-yellow-500 to-yellow-600' },
+  { id: 'inquiry-based', name: 'Inquiry-Based', value: 'inquiry-based', label: 'Inquiry-Based', description: 'Question-driven exploration', icon: Search, color: 'from-teal-500 to-teal-600' }
 ];
 
 export const environments = [

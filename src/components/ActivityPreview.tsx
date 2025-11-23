@@ -15,7 +15,7 @@ import {
   Brain,
   CheckCircle,
   AlertCircle,
-  Lightbulb
+  Search
 } from 'lucide-react';
 import { Activity } from '../store/activityStore';
 
@@ -31,7 +31,9 @@ const ActivityPreview: React.FC<ActivityPreviewProps> = ({ activity, onClose, on
     reggio: 'from-green-500 to-green-600',
     waldorf: 'from-purple-500 to-purple-600',
     highscope: 'from-orange-500 to-orange-600',
-    bankstreet: 'from-pink-500 to-pink-600'
+    bankstreet: 'from-pink-500 to-pink-600',
+    'play-based': 'from-yellow-500 to-yellow-600',
+    'inquiry-based': 'from-teal-500 to-teal-600'
   };
 
   const methodologyIcons = {
@@ -39,7 +41,9 @@ const ActivityPreview: React.FC<ActivityPreviewProps> = ({ activity, onClose, on
     reggio: Camera,
     waldorf: Music,
     highscope: Brain,
-    bankstreet: Users
+    bankstreet: Users,
+    'play-based': Play,
+    'inquiry-based': Search
   };
 
   const getDifficultyColor = (difficulty: number) => {
