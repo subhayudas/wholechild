@@ -6,35 +6,18 @@ import {
   Target, 
   Star, 
   Brain, 
-  Heart, 
   Users, 
   Palette, 
   Music,
   BarChart3,
-  PieChart,
   Activity,
-  Clock,
   Award,
   Download,
-  Share2,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  BookOpen,
-  Zap,
-  Sparkles,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  CheckCircle,
-  AlertCircle,
-  Info
+  BookOpen
 } from 'lucide-react';
 import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
 import { useLearningStoryStore } from '../store/learningStoryStore';
-import ProgressChart from '../components/ProgressChart';
 import DevelopmentalRadarChart from '../components/DevelopmentalRadarChart';
 import ActivityHeatmap from '../components/ActivityHeatmap';
 import MilestoneTracker from '../components/MilestoneTracker';
@@ -48,7 +31,6 @@ const ProgressAnalytics = () => {
   const { getStoriesForChild, fetchStories } = useLearningStoryStore();
   
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
-  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['cognitive', 'language', 'social', 'physical', 'creative']);
   const [showInsights, setShowInsights] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'development' | 'activities' | 'milestones' | 'reports'>('overview');
   const [showReportModal, setShowReportModal] = useState(false);
@@ -116,24 +98,47 @@ const ProgressAnalytics = () => {
         const timeframeDays = timeframes.find(t => t.id === selectedTimeframe)?.days || 30;
         const startDate = new Date(now.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
 
-        // Filter data by timeframe
-        const recentActivities = activeChild.activityHistory.filter(
-          activity => new Date(activity.completedAt) >= startDate
+        // Filter data by timeframe - ensure activityHistory exists
+        const activityHistory = activeChild.activityHistory || [];
+        const recentActivities = activityHistory.filter(
+          (activity: any) => {
+            if (!activity.completedAt) return false;
+            try {
+              return new Date(activity.completedAt) >= startDate;
+            } catch {
+              return false;
+            }
+          }
         );
         const recentStories = childStories.filter(
-          story => new Date(story.date) >= startDate
+          (story: any) => {
+            if (!story.date) return false;
+            try {
+              return new Date(story.date) >= startDate;
+            } catch {
+              return false;
+            }
+          }
         );
 
         // Calculate metrics
         const totalActivities = recentActivities.length;
-        const totalLearningTime = recentActivities.reduce((sum, activity) => sum + activity.duration, 0);
+        const totalLearningTime = recentActivities.reduce((sum: number, activity: any) => sum + (activity.duration || 0), 0);
         const averageSessionTime = totalActivities > 0 ? Math.round(totalLearningTime / totalActivities) : 0;
         const storiesCreated = recentStories.length;
 
         // Calculate progress trends
         const previousPeriodStart = new Date(startDate.getTime() - (timeframeDays * 24 * 60 * 60 * 1000));
-        const previousActivities = activeChild.activityHistory.filter(
-          activity => new Date(activity.completedAt) >= previousPeriodStart && new Date(activity.completedAt) < startDate
+        const previousActivities = activityHistory.filter(
+          (activity: any) => {
+            if (!activity.completedAt) return false;
+            try {
+              const activityDate = new Date(activity.completedAt);
+              return activityDate >= previousPeriodStart && activityDate < startDate;
+            } catch {
+              return false;
+            }
+          }
         );
         
         const activityTrend = previousActivities.length > 0 
@@ -188,94 +193,8 @@ const ProgressAnalytics = () => {
 
     return (
       <div className="space-y-8">
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className={`flex items-center gap-1 text-sm font-medium ${
-                analyticsData.activityTrend > 0 ? 'text-green-600' : 
-                analyticsData.activityTrend < 0 ? 'text-red-600' : 'text-gray-600'
-              }`}>
-                {analyticsData.activityTrend > 0 ? <ArrowUp className="w-4 h-4" /> :
-                 analyticsData.activityTrend < 0 ? <ArrowDown className="w-4 h-4" /> :
-                 <Minus className="w-4 h-4" />}
-                {Math.abs(analyticsData.activityTrend).toFixed(1)}%
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900 mb-1">{analyticsData.totalActivities}</div>
-            <div className="text-sm text-gray-600">Activities Completed</div>
-          </motion.div>
-
-          <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900 mb-1">{analyticsData.totalLearningTime}</div>
-            <div className="text-sm text-gray-600">Minutes Learning</div>
-          </motion.div>
-
-          <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900 mb-1">{analyticsData.storiesCreated}</div>
-            <div className="text-sm text-gray-600">Learning Stories</div>
-          </motion.div>
-
-          <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Zap className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900 mb-1">{analyticsData.currentStreak}</div>
-            <div className="text-sm text-gray-600">Day Streak</div>
-          </motion.div>
-        </div>
-
-        {/* Progress Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-        >
-          <ProgressChart 
-            data={{
-              activities: analyticsData.recentActivities,
-              timeframe: selectedTimeframe
-            }}
-          />
-        </motion.div>
-
         {/* Developmental Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -284,38 +203,6 @@ const ProgressAnalytics = () => {
             <DevelopmentalRadarChart 
               data={analyticsData.developmentalProgress}
             />
-          </motion.div>
-
-          <motion.div
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-          >
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Activity Distribution</h3>
-            <div className="space-y-4">
-              {Object.entries(analyticsData.activityCategories).map(([category, count]) => {
-                const total = Object.values(analyticsData.activityCategories).reduce((sum, c) => sum + c, 0);
-                const percentage = total > 0 ? (count / total) * 100 : 0;
-                
-                return (
-                  <div key={category}>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">{category}</span>
-                      <span className="text-sm text-gray-600">{count} ({percentage.toFixed(1)}%)</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <motion.div
-                        className="bg-blue-500 h-2 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${percentage}%` }}
-                        transition={{ duration: 1, delay: 0.5 }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </motion.div>
         </div>
 
@@ -336,104 +223,151 @@ const ProgressAnalytics = () => {
     );
   };
 
-  const renderDevelopmentTab = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <DevelopmentalRadarChart 
-          data={analyticsData?.developmentalProgress || []}
-        />
-        <div className="space-y-6">
-          {developmentalAreas.map((area) => {
-            const Icon = area.icon;
-            const progress = activeChild?.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile] || 0;
-            
-            return (
-              <div key={area.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 bg-${area.color}-100 rounded-lg flex items-center justify-center`}>
-                      <Icon className={`w-5 h-5 text-${area.color}-600`} />
-                    </div>
-                    <span className="font-semibold text-gray-900">{area.label}</span>
-                  </div>
-                  <span className="text-2xl font-bold text-gray-900">{progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <motion.div
-                    className={`h-3 rounded-full bg-${area.color}-500`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 1, delay: 0.2 }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+  const renderDevelopmentTab = () => {
+    if (!activeChild || !analyticsData) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No data available</p>
         </div>
-      </div>
-    </div>
-  );
+      );
+    }
 
-  const renderActivitiesTab = () => (
-    <div className="space-y-8">
-      <ActivityHeatmap 
-        activities={analyticsData?.recentActivities || []}
-        timeframe={selectedTimeframe}
-      />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activities</h3>
-          <div className="space-y-4">
-            {analyticsData?.recentActivities.slice(0, 5).map((activity, index) => {
-              const activityData = activities.find(a => a.id === activity.activityId);
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <DevelopmentalRadarChart 
+            data={analyticsData.developmentalProgress || []}
+          />
+          <div className="space-y-6">
+            {developmentalAreas.map((area) => {
+              const Icon = area.icon;
+              const progress = activeChild.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile] || 0;
+              
               return (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-900">{activityData?.title || 'Unknown Activity'}</div>
-                    <div className="text-sm text-gray-600">{new Date(activity.completedAt).toLocaleDateString()}</div>
+                <div key={area.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 bg-${area.color}-100 rounded-lg flex items-center justify-center`}>
+                        <Icon className={`w-5 h-5 text-${area.color}-600`} />
+                      </div>
+                      <span className="font-semibold text-gray-900">{area.label}</span>
+                    </div>
+                    <span className="text-2xl font-bold text-gray-900">{progress}%</span>
                   </div>
-                  <div className="text-sm text-gray-600">{activity.duration} min</div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <motion.div
+                      className={`h-3 rounded-full bg-${area.color}-500`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 1, delay: 0.2 }}
+                    />
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
+      </div>
+    );
+  };
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Learning Preferences</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Learning Style</span>
-              <span className="font-medium text-gray-900 capitalize">{activeChild?.preferences.learningStyle}</span>
+  const renderActivitiesTab = () => {
+    if (!activeChild || !analyticsData) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No data available</p>
+        </div>
+      );
+    }
+
+    const recentActivities = analyticsData.recentActivities || [];
+    const hasActivities = recentActivities.length > 0;
+
+    return (
+      <div className="space-y-8">
+        <ActivityHeatmap 
+          activities={recentActivities}
+          timeframe={selectedTimeframe}
+        />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activities</h3>
+            <div className="space-y-4">
+              {hasActivities ? (
+                recentActivities.slice(0, 5).map((activity: any, index: number) => {
+                  const activityData = activities.find(a => a.id === activity.activityId);
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium text-gray-900">{activityData?.title || 'Unknown Activity'}</div>
+                        <div className="text-sm text-gray-600">
+                          {activity.completedAt ? new Date(activity.completedAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-600">{activity.duration || 0} min</div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-gray-500 text-center py-4">No recent activities</p>
+              )}
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Energy Level</span>
-              <span className="font-medium text-gray-900 capitalize">{activeChild?.preferences.energyLevel}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Social Preference</span>
-              <span className="font-medium text-gray-900 capitalize">{activeChild?.preferences.socialPreference.replace('-', ' ')}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700">Average Session</span>
-              <span className="font-medium text-gray-900">{analyticsData?.averageSessionTime} min</span>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Learning Preferences</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Learning Style</span>
+                <span className="font-medium text-gray-900 capitalize">
+                  {activeChild.preferences?.learningStyle || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Energy Level</span>
+                <span className="font-medium text-gray-900 capitalize">
+                  {activeChild.preferences?.energyLevel || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Social Preference</span>
+                <span className="font-medium text-gray-900 capitalize">
+                  {activeChild.preferences?.socialPreference?.replace('-', ' ') || 'N/A'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700">Average Session</span>
+                <span className="font-medium text-gray-900">
+                  {analyticsData.averageSessionTime || 0} min
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
 
-  const renderMilestonesTab = () => (
-    <div className="space-y-8">
-      <MilestoneTracker 
-        child={activeChild}
-        developmentalAreas={developmentalAreas}
-      />
-    </div>
-  );
+  const renderMilestonesTab = () => {
+    if (!activeChild) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-600">No child selected</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-8">
+        <MilestoneTracker 
+          child={activeChild}
+          developmentalAreas={developmentalAreas}
+        />
+      </div>
+    );
+  };
 
   const renderReportsTab = () => (
     <div className="space-y-8">

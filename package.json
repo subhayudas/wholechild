@@ -17,6 +17,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^2.29.3",
     "framer-motion": "^10.16.16",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.344.0",
     "openai": "^6.8.1",
