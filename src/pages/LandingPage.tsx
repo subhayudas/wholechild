@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
 import { ShinyButton } from '../components/ui/ShinyButton';
+import ShaderBackground from '../components/ShaderBackground';
 import { cn } from '../lib/utils';
 
 const menuItems = [
@@ -22,29 +23,7 @@ const menuItems = [
 
 const LandingPage = () => {
   const [menuState, setMenuState] = useState(false);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
   const { signInWithGoogle, isLoading } = useAuthStore();
-
-  // Ensure video plays continuously
-  React.useEffect(() => {
-    const video = videoRef.current;
-    if (video) {
-      video.play().catch((error) => {
-        console.log('Video autoplay prevented:', error);
-      });
-      
-      // Prevent video from pausing
-      const handlePause = () => {
-        video.play();
-      };
-      
-      video.addEventListener('pause', handlePause);
-      
-      return () => {
-        video.removeEventListener('pause', handlePause);
-      };
-    }
-  }, []);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -131,37 +110,16 @@ const LandingPage = () => {
 
       <main>
         {/* New Hero Section based on inspiration */}
-        <section className="relative pt-[120px] pb-16 md:pt-[180px] lg:pt-[216px] overflow-hidden">
-          {/* Background Video Section - Full Width */}
-          <div className="absolute inset-0 w-full h-full">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ pointerEvents: 'none' }}
-              onPause={(e) => {
-                e.preventDefault();
-                e.currentTarget.play();
-              }}
-            >
-              <source src="/herobackground.mp4" type="video/mp4" />
-            </video>
-            {/* Overlay gradient for better text readability */}
-            <div aria-hidden className="absolute z-[1] inset-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-[2px]" />
-          </div>
-
-          <div className="relative z-10 max-w-[1060px] mx-auto px-4">
+        <ShaderBackground>
+          <div className="relative z-10 max-w-[1060px] mx-auto px-4 pt-[120px] pb-16 md:pt-[180px] lg:pt-[216px]">
             <div className="flex flex-col items-center gap-12">
               {/* Hero Content */}
               <div className="max-w-[937px] flex flex-col items-center gap-3">
                 <div className="flex flex-col items-center gap-6">
-                  <h1 className="max-w-[800px] text-center text-gray-900 dark:text-white text-5xl md:text-[80px] font-normal leading-tight md:leading-[96px] font-serif">
+                  <h1 className="max-w-[800px] text-center text-white text-5xl md:text-[80px] font-normal leading-tight md:leading-[96px] font-serif drop-shadow-sm">
                     Nurture Every Child's Potential with WholeChild
                   </h1>
-                  <p className="max-w-[600px] text-center text-gray-600 dark:text-gray-400 text-lg font-medium leading-7">
+                  <p className="max-w-[600px] text-center text-gray-200 text-lg font-medium leading-7 drop-shadow-sm">
                     A comprehensive platform connecting parents, educators, and therapists to support holistic child development through personalized activities, progress tracking, and expert guidance.
                   </p>
                 </div>
@@ -185,7 +143,7 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
-        </section>
+        </ShaderBackground>
 
         {/* Features Section - Adapted spacing */}
         <section id="features" className="py-20 bg-white dark:bg-zinc-950">
