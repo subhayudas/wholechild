@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
@@ -6,47 +6,27 @@ import {
   Users, 
   Brain, 
   Palette, 
-  Music, 
   BookOpen, 
-  Camera, 
-  Play, 
-  Shield, 
-  Star, 
-  ArrowRight, 
-  Check, 
-  Globe, 
-  Clock, 
   Target,
-  Sparkles,
-  Baby,
-  GraduationCap,
-  Stethoscope,
-  Home,
-  Loader2,
-  Mail,
   Menu,
-  SendHorizonal,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Button } from '../components/ui/Button';
+import { ShinyButton } from '../components/ui/ShinyButton';
 import { cn } from '../lib/utils';
 
 const menuItems = [
-  { name: 'Features', href: '#features' },
-  { name: 'Solution', href: '#solution' },
-  { name: 'Pricing', href: '#pricing' },
-  { name: 'About', href: '#about' },
 ];
 
 const LandingPage = () => {
   const [menuState, setMenuState] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
+  const videoRef = React.useRef<HTMLVideoElement>(null);
   const { signInWithGoogle, isLoading } = useAuthStore();
 
   // Ensure video plays continuously
-  useEffect(() => {
+  React.useEffect(() => {
     const video = videoRef.current;
     if (video) {
       video.play().catch((error) => {
@@ -70,7 +50,6 @@ const LandingPage = () => {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      // Error is already handled in the store
       console.error('Google sign in error:', error);
     }
   };
@@ -80,7 +59,7 @@ const LandingPage = () => {
       <header>
         <nav
           data-state={menuState ? 'active' : undefined}
-          className="group fixed z-20 w-full border-b border-dashed bg-white backdrop-blur md:relative dark:bg-zinc-950/50 lg:dark:bg-transparent">
+          className="group fixed z-20 w-full border-b border-dashed bg-white/80 backdrop-blur-md md:relative dark:bg-zinc-950/50 lg:dark:bg-transparent border-gray-200 dark:border-gray-800">
           <div className="w-full px-6 lg:px-8">
             <div className="flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
               <div className="flex w-full justify-between lg:w-auto">
@@ -93,7 +72,7 @@ const LandingPage = () => {
                 <button
                   onClick={() => setMenuState(!menuState)}
                   aria-label={menuState ? 'Close Menu' : 'Open Menu'}
-                  className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden">
+                  className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden text-gray-900 dark:text-gray-100">
                   <Menu className={cn(
                     "m-auto size-6 duration-200",
                     menuState && "rotate-180 scale-0 opacity-0"
@@ -114,22 +93,24 @@ const LandingPage = () => {
                       <li key={index}>
                         <a
                           href={item.href}
-                          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 block duration-150">
+                          className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 block duration-150 font-medium">
                           <span>{item.name}</span>
                         </a>
                       </li>
                     ))}
                   </ul>
                 </div>
-                <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit lg:border-l lg:pl-6">
+                <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit lg:border-l lg:border-gray-200 lg:pl-6 dark:lg:border-gray-800">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="rounded-full"
                     onClick={(e) => { e.preventDefault(); handleGoogleSignIn(); }}>
                     <span>Login</span>
                   </Button>
                   <Button
                     size="sm"
+                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset]"
                     onClick={handleGoogleSignIn}
                     disabled={isLoading}>
                     {isLoading ? (
@@ -149,7 +130,8 @@ const LandingPage = () => {
       </header>
 
       <main>
-        <section className="relative w-full overflow-hidden min-h-[600px]">
+        {/* New Hero Section based on inspiration */}
+        <section className="relative pt-[120px] pb-16 md:pt-[180px] lg:pt-[216px] overflow-hidden">
           {/* Background Video Section - Full Width */}
           <div className="absolute inset-0 w-full h-full">
             <video
@@ -168,139 +150,112 @@ const LandingPage = () => {
               <source src="/herobackground.mp4" type="video/mp4" />
             </video>
             {/* Overlay gradient for better text readability */}
-            <div aria-hidden className="absolute z-[1] inset-0 bg-gradient-to-r from-white/80 from-35% to-transparent dark:from-zinc-950/80" />
+            <div aria-hidden className="absolute z-[1] inset-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-[2px]" />
           </div>
-          
-          {/* Content Section */}
-          <div className="relative z-10 w-full px-6 lg:px-8 py-28 lg:py-20">
-            <div className="lg:flex lg:items-center lg:gap-12 max-w-7xl mx-auto">
-              <div className="relative z-10 mx-auto max-w-xl text-center lg:ml-0 lg:w-1/2 lg:text-left">
-                <Link
-                  to="/"
-                  className="rounded-lg mx-auto flex w-fit items-center gap-2 border border-gray-200 dark:border-gray-800 p-1 pr-3 lg:ml-0 hover:border-gray-300 dark:hover:border-gray-700 transition-colors">
-                  <span className="bg-gray-100 dark:bg-gray-800 rounded-md px-2 py-1 text-xs">New</span>
-                  <span className="text-sm">Holistic Child Development Platform</span>
-                  <span className="bg-gray-200 dark:bg-gray-700 block h-4 w-px"></span>
-                  <ArrowRight className="size-4" />
-                </Link>
-                <h1 className="mt-10 text-balance text-4xl font-bold md:text-5xl xl:text-5xl">
-                  Nurture Every Child's Potential
-                </h1>
-                <p className="mt-8 text-gray-600 dark:text-gray-400">
-                  A comprehensive platform connecting parents, educators, and therapists to support 
-                  holistic child development through personalized activities, progress tracking, and expert guidance.
-                </p>
-                <div>
-                  <form
-                    action=""
-                    className="mx-auto my-10 max-w-sm lg:my-12 lg:ml-0 lg:mr-auto"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleGoogleSignIn();
-                    }}>
-                    <div className="bg-white dark:bg-gray-900 relative grid grid-cols-[1fr_auto] items-center rounded-[1rem] border border-gray-200 dark:border-gray-800 pr-1 shadow shadow-zinc-950/5 focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500">
-                      <Mail className="pointer-events-none absolute inset-y-0 left-5 my-auto size-5 text-gray-400" />
-                      <input
-                        placeholder="Your email address"
-                        className="h-14 w-full bg-transparent pl-12 focus:outline-none text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-                        type="email"
-                      />
-                      <div className="md:pr-1.5 lg:pr-0">
-                        <Button
-                          aria-label="submit"
-                          type="submit"
-                          disabled={isLoading}
-                          size="sm">
-                          <span className="hidden md:block">Get Started</span>
-                          <SendHorizonal
-                            className="relative mx-auto size-5 md:hidden"
-                            strokeWidth={2}
-                          />
-                        </Button>
-                      </div>
-                    </div>
-                  </form>
-                  <ul className="list-inside list-disc space-y-2 text-gray-600 dark:text-gray-400">
-                    <li>Faster Development Tracking</li>
-                    <li>Modern Educational Methods</li>
-                    <li>100% Customizable Activities</li>
-                  </ul>
+
+          <div className="relative z-10 max-w-[1060px] mx-auto px-4">
+            <div className="flex flex-col items-center gap-12">
+              {/* Hero Content */}
+              <div className="max-w-[937px] flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-6">
+                  <h1 className="max-w-[800px] text-center text-gray-900 dark:text-white text-5xl md:text-[80px] font-normal leading-tight md:leading-[96px] font-serif">
+                    Nurture Every Child's Potential with WholeChild
+                  </h1>
+                  <p className="max-w-[600px] text-center text-gray-600 dark:text-gray-400 text-lg font-medium leading-7">
+                    A comprehensive platform connecting parents, educators, and therapists to support holistic child development through personalized activities, progress tracking, and expert guidance.
+                  </p>
                 </div>
+              </div>
+
+              {/* CTA Button */}
+              <div className="flex justify-center">
+                <ShinyButton 
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading}
+                >
+                   {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        <span>Signing in...</span>
+                      </>
+                    ) : (
+                      <span>Start for free</span>
+                    )}
+                </ShinyButton>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Features Section - Adapted spacing */}
+        <section id="features" className="py-20 bg-white dark:bg-zinc-950">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-serif text-gray-900 dark:text-white mb-4">
+                Everything You Need for Holistic Development
+              </h2>
+              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+                Our platform brings together the best tools and expertise to support every aspect of your child's growth.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: Brain,
+                  title: "Cognitive Development",
+                  description: "Interactive activities designed to enhance problem-solving, memory, and critical thinking skills.",
+                  color: "from-purple-500 to-purple-600"
+                },
+                {
+                  icon: Heart,
+                  title: "Emotional Intelligence",
+                  description: "Tools and activities to help children understand and manage their emotions effectively.",
+                  color: "from-pink-500 to-pink-600"
+                },
+                {
+                  icon: Users,
+                  title: "Social Skills",
+                  description: "Collaborative activities that build communication, empathy, and relationship skills.",
+                  color: "from-blue-500 to-blue-600"
+                },
+                {
+                  icon: Palette,
+                  title: "Creative Expression",
+                  description: "Art, music, and storytelling activities that nurture creativity and self-expression.",
+                  color: "from-green-500 to-green-600"
+                },
+                {
+                  icon: Target,
+                  title: "Motor Skills",
+                  description: "Physical activities and exercises designed to develop fine and gross motor skills.",
+                  color: "from-orange-500 to-orange-600"
+                },
+                {
+                  icon: BookOpen,
+                  title: "Academic Support",
+                  description: "Educational content aligned with curriculum standards and learning objectives.",
+                  color: "from-indigo-500 to-indigo-600"
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.6 }}
+                  className="bg-gray-50 dark:bg-zinc-900/50 p-8 rounded-2xl hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-200 dark:hover:border-gray-800"
+                >
+                  <div className={`w-12 h-12 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mb-6`}>
+                    <feature.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">{feature.title}</h3>
+                  <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
-
-      {/* Features Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need for Holistic Development
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our platform brings together the best tools and expertise to support every aspect of your child's growth.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Brain,
-                title: "Cognitive Development",
-                description: "Interactive activities designed to enhance problem-solving, memory, and critical thinking skills.",
-                color: "from-purple-500 to-purple-600"
-              },
-              {
-                icon: Heart,
-                title: "Emotional Intelligence",
-                description: "Tools and activities to help children understand and manage their emotions effectively.",
-                color: "from-pink-500 to-pink-600"
-              },
-              {
-                icon: Users,
-                title: "Social Skills",
-                description: "Collaborative activities that build communication, empathy, and relationship skills.",
-                color: "from-blue-500 to-blue-600"
-              },
-              {
-                icon: Palette,
-                title: "Creative Expression",
-                description: "Art, music, and storytelling activities that nurture creativity and self-expression.",
-                color: "from-green-500 to-green-600"
-              },
-              {
-                icon: Target,
-                title: "Motor Skills",
-                description: "Physical activities and exercises designed to develop fine and gross motor skills.",
-                color: "from-orange-500 to-orange-600"
-              },
-              {
-                icon: BookOpen,
-                title: "Academic Support",
-                description: "Educational content aligned with curriculum standards and learning objectives.",
-                color: "from-indigo-500 to-indigo-600"
-              }
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100"
-              >
-                <div className={`w-12 h-12 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mb-6`}>
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
-                <p className="text-gray-600">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
     </div>
   );
 };
@@ -311,7 +266,7 @@ const Logo = ({ className }: { className?: string }) => {
       <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
         <Heart className="w-6 h-6 text-white" />
       </div>
-      <span className="text-2xl font-bold text-blue-600">
+      <span className="text-2xl font-bold text-gray-900 dark:text-white font-serif tracking-tight">
         WholeChild
       </span>
     </div>
