@@ -51,22 +51,14 @@ const ProgressAnalytics = () => {
   ];
   // Note: These are UI configuration for the analytics page, matching the Child.developmentalProfile structure
 
-  // Fetch all data when component mounts or activeChild changes
+  // Fetch all data when component mounts
   useEffect(() => {
-    const fetchAllData = async () => {
-      if (!activeChild) {
-        setAnalyticsData(null);
-        setIsLoading(false);
-        return;
-      }
-
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        // Fetch all required data in parallel
         await Promise.all([
           fetchChildren(),
-          fetchActivities(),
-          fetchStories(activeChild.id)
+          fetchActivities()
         ]);
       } catch (error) {
         console.error('Error fetching analytics data:', error);
@@ -75,9 +67,15 @@ const ProgressAnalytics = () => {
       }
     };
 
-    fetchAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeChild?.id]);
+    fetchInitialData();
+  }, [fetchChildren, fetchActivities]);
+
+  // Fetch stories when active child changes
+  useEffect(() => {
+    if (activeChild) {
+      fetchStories(activeChild.id);
+    }
+  }, [activeChild?.id, fetchStories]);
 
   // Recalculate analytics when data or timeframe changes
   useEffect(() => {
@@ -144,7 +142,7 @@ const ProgressAnalytics = () => {
         // Calculate developmental progress
         const developmentalProgress = developmentalAreas.map(area => ({
           ...area,
-          current: activeChild.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile],
+          current: activeChild.developmentalProfile?.[area.id as keyof typeof activeChild.developmentalProfile] || 0,
           trend: 0 // Will be calculated from historical data if available
         }));
 
@@ -237,7 +235,7 @@ const ProgressAnalytics = () => {
           <div className="space-y-6">
             {developmentalAreas.map((area) => {
               const Icon = area.icon;
-              const progress = activeChild.developmentalProfile[area.id as keyof typeof activeChild.developmentalProfile] || 0;
+              const progress = activeChild.developmentalProfile?.[area.id as keyof typeof activeChild.developmentalProfile] || 0;
               
               return (
                 <div key={area.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
@@ -346,9 +344,35 @@ const ProgressAnalytics = () => {
           <div className="text-center py-16">
             <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">No Child Selected</h2>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-8">
               Please select a child profile to view their progress analytics.
             </p>
+            
+            {children.length > 0 ? (
+              <div className="flex flex-wrap justify-center gap-4">
+                {children.map((child) => (
+                  <button
+                    key={child.id}
+                    onClick={() => setActiveChild(child)}
+                    className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:shadow-md transition-all duration-300"
+                  >
+                    {child.avatar && (
+                      <img 
+                        src={child.avatar} 
+                        alt={child.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    )}
+                    <span className="text-lg font-medium text-gray-900">{child.name}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center">
+                 <p className="text-gray-500 mb-4">No child profiles found.</p>
+                 {/* Link to create child would be good here but not strictly asked for */}
+              </div>
+            )}
           </div>
         </div>
       </div>
