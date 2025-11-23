@@ -10,8 +10,6 @@ import {
   Palette, 
   Music,
   BarChart3,
-  Activity,
-  Award,
   Download,
   BookOpen
 } from 'lucide-react';
@@ -19,8 +17,6 @@ import { useChildStore } from '../store/childStore';
 import { useActivityStore } from '../store/activityStore';
 import { useLearningStoryStore } from '../store/learningStoryStore';
 import DevelopmentalRadarChart from '../components/DevelopmentalRadarChart';
-import ActivityHeatmap from '../components/ActivityHeatmap';
-import MilestoneTracker from '../components/MilestoneTracker';
 import LearningInsights from '../components/LearningInsights';
 import ProgressReport from '../components/ProgressReport';
 import toast from 'react-hot-toast';
@@ -32,7 +28,7 @@ const ProgressAnalytics = () => {
   
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [showInsights, setShowInsights] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'development' | 'activities' | 'milestones' | 'reports'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'development' | 'reports'>('overview');
   const [showReportModal, setShowReportModal] = useState(false);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -271,103 +267,6 @@ const ProgressAnalytics = () => {
     );
   };
 
-  const renderActivitiesTab = () => {
-    if (!activeChild || !analyticsData) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No data available</p>
-        </div>
-      );
-    }
-
-    const recentActivities = analyticsData.recentActivities || [];
-    const hasActivities = recentActivities.length > 0;
-
-    return (
-      <div className="space-y-8">
-        <ActivityHeatmap 
-          activities={recentActivities}
-          timeframe={selectedTimeframe}
-        />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Activities</h3>
-            <div className="space-y-4">
-              {hasActivities ? (
-                recentActivities.slice(0, 5).map((activity: any, index: number) => {
-                  const activityData = activities.find(a => a.id === activity.activityId);
-                  return (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">{activityData?.title || 'Unknown Activity'}</div>
-                        <div className="text-sm text-gray-600">
-                          {activity.completedAt ? new Date(activity.completedAt).toLocaleDateString() : 'N/A'}
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-600">{activity.duration || 0} min</div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-gray-500 text-center py-4">No recent activities</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Learning Preferences</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Learning Style</span>
-                <span className="font-medium text-gray-900 capitalize">
-                  {activeChild.preferences?.learningStyle || 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Energy Level</span>
-                <span className="font-medium text-gray-900 capitalize">
-                  {activeChild.preferences?.energyLevel || 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Social Preference</span>
-                <span className="font-medium text-gray-900 capitalize">
-                  {activeChild.preferences?.socialPreference?.replace('-', ' ') || 'N/A'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-700">Average Session</span>
-                <span className="font-medium text-gray-900">
-                  {analyticsData.averageSessionTime || 0} min
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-
-  const renderMilestonesTab = () => {
-    if (!activeChild) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No child selected</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-8">
-        <MilestoneTracker 
-          child={activeChild}
-          developmentalAreas={developmentalAreas}
-        />
-      </div>
-    );
-  };
 
   const renderReportsTab = () => (
     <div className="space-y-8">
@@ -553,8 +452,6 @@ const ProgressAnalytics = () => {
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'development', label: 'Development', icon: TrendingUp },
-              { id: 'activities', label: 'Activities', icon: Activity },
-              { id: 'milestones', label: 'Milestones', icon: Award },
               { id: 'reports', label: 'Reports', icon: Download }
             ].map((tab) => {
               const Icon = tab.icon;
@@ -585,8 +482,6 @@ const ProgressAnalytics = () => {
         >
           {activeTab === 'overview' && renderOverviewTab()}
           {activeTab === 'development' && renderDevelopmentTab()}
-          {activeTab === 'activities' && renderActivitiesTab()}
-          {activeTab === 'milestones' && renderMilestonesTab()}
           {activeTab === 'reports' && renderReportsTab()}
         </motion.div>
 
