@@ -534,7 +534,59 @@ const AIProGenerator = () => {
             transition={{ duration: 0.6, delay: 0.3 }}
             style={{ maxHeight: 'calc(100vh - 120px)' }}
           >
-            {!generatedActivity ? (
+            {isGenerating ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <motion.div
+                    className="w-24 h-24 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
+                  </motion.div>
+                  <motion.h3
+                    className="text-xl font-semibold text-gray-900 mb-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    Generating Your Activity...
+                  </motion.h3>
+                  <motion.p
+                    className="text-gray-600 max-w-md"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    Our AI is crafting a personalized learning experience tailored to your child's needs and preferences.
+                  </motion.p>
+                  <motion.div
+                    className="mt-6 flex items-center justify-center gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    <div className="flex gap-1">
+                      <motion.div
+                        className="w-2 h-2 bg-indigo-600 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                      />
+                      <motion.div
+                        className="w-2 h-2 bg-purple-600 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                      />
+                      <motion.div
+                        className="w-2 h-2 bg-indigo-600 rounded-full"
+                        animate={{ y: [0, -8, 0] }}
+                        transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                      />
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            ) : !generatedActivity ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="w-24 h-24 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
