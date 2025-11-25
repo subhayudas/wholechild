@@ -648,7 +648,25 @@ CRITICAL FINAL REQUIREMENTS
 
 REMEMBER: You are creating a MASTERPIECE for ${request.childProfile.name}. This activity should make ${pronouns.possessive} caregiver say "Wow, this is SO ${request.childProfile.name}!" and fill ${request.childProfile.name} with excitement and engagement. Make it extraordinary.
 
-Return valid JSON only. Begin your response with { and end with }`;
+═══════════════════════════════════════════════════════════════
+CRITICAL: OUTPUT FORMAT REQUIREMENT
+═══════════════════════════════════════════════════════════════
+
+YOU MUST RESPOND WITH ONLY VALID JSON. NOTHING ELSE.
+
+DO NOT:
+- Write any explanatory text before or after the JSON
+- Apologize or explain why you cannot complete the request
+- Include markdown code blocks (just the raw JSON)
+- Add comments or notes
+
+YOU MUST:
+- Start your response immediately with { (opening brace)
+- End your response with } (closing brace)
+- Return ONLY the JSON object, nothing else
+- Ensure the JSON is valid and parseable
+
+Your ENTIRE response must be parseable JSON starting with { and ending with }. Any other format will cause the system to fail.`;
 };
 
 export const generateActivityWithAI = async (request: AIGenerationRequest): Promise<AIGeneratedActivity> => {
@@ -670,7 +688,9 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
       messages: [
         {
           role: "system",
-          content: `You are an ELITE early childhood education specialist, developmental psychologist, and master activity designer with 20+ years of experience creating transformative, personalized learning experiences. You possess rare expertise in:
+          content: `IMPORTANT: You are operating in JSON mode. You MUST respond with ONLY valid JSON. No explanations, no apologies, no markdown, no text outside the JSON object. Your response must start with { and end with }.
+
+You are an ELITE early childhood education specialist, developmental psychologist, and master activity designer with 20+ years of experience creating transformative, personalized learning experiences. You possess rare expertise in:
 
 ═══════════════════════════════════════════════════════════════
 CORE COMPETENCIES & DEEP EXPERTISE
@@ -919,7 +939,8 @@ Make it extraordinary. Make it personal. Make it transformative.`
         }
       ],
       temperature: 0.8,
-      max_tokens: 6000
+      max_tokens: 6000,
+      response_format: { type: "json_object" }
     });
 
     const response = completion.choices[0]?.message?.content;
@@ -931,12 +952,31 @@ Make it extraordinary. Make it personal. Make it transformative.`
     let generatedActivity: AIGeneratedActivity;
     try {
       // Try to extract JSON from markdown code blocks if present
-      const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/) || response.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonString = jsonMatch ? jsonMatch[1] : response;
+      let jsonString = response.trim();
+      
+      // Remove markdown code blocks if present
+      const jsonMatch = jsonString.match(/```json\s*([\s\S]*?)\s*```/) || jsonString.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[1].trim();
+      }
+      
+      // Try to find JSON object in the response (in case there's extra text)
+      const jsonObjectMatch = jsonString.match(/\{[\s\S]*\}/);
+      if (jsonObjectMatch) {
+        jsonString = jsonObjectMatch[0];
+      }
+      
+      // If response doesn't start with {, it's likely not JSON
+      if (!jsonString.startsWith('{')) {
+        console.error('Response does not appear to be JSON. First 500 chars:', jsonString.substring(0, 500));
+        throw new Error(`OpenAI returned non-JSON response. The model may have encountered an issue. Response preview: ${jsonString.substring(0, 200)}...`);
+      }
+      
       generatedActivity = JSON.parse(jsonString);
-    } catch (parseError) {
+    } catch (parseError: any) {
       console.error('Failed to parse JSON response:', parseError);
-      throw new Error('Invalid JSON response from OpenAI');
+      console.error('Raw response (first 1000 chars):', response.substring(0, 1000));
+      throw new Error(`Invalid JSON response from OpenAI: ${parseError.message}. The AI may have returned an error message instead of JSON.`);
     }
 
     // Validate the response has required fields
