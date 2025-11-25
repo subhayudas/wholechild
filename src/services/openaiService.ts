@@ -684,7 +684,7 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
     const pronouns = getPronouns(request.childProfile.gender);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -938,8 +938,8 @@ Make it extraordinary. Make it personal. Make it transformative.`
           content: prompt
         }
       ],
-      temperature: 0.7,
-      max_tokens: 4000,
+      temperature: 0.8,
+      max_tokens: 6000,
       response_format: { type: "json_object" }
     });
 
@@ -1059,7 +1059,7 @@ export const generateActivityVariations = async (
   for (let i = 0; i < Math.min(count, variationPrompts.length); i++) {
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -1135,7 +1135,7 @@ export const analyzeActivityQuality = async (activity: AIGeneratedActivity): Pro
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
