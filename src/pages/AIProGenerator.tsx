@@ -314,30 +314,6 @@ const AIProGenerator = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              {openAIConnected !== null && (
-                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${
-                  openAIConnected 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-red-100 text-red-700'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    openAIConnected ? 'bg-green-500' : 'bg-red-500'
-                  }`}></div>
-                  {openAIConnected ? 'AI Connected' : 'AI Disconnected'}
-                </div>
-              )}
-              
-              <motion.button
-                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors flex items-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Settings className="w-4 h-4" />
-                Advanced
-              </motion.button>
-            </div>
           </div>
         </motion.div>
 
