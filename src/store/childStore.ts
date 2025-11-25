@@ -7,6 +7,7 @@ export interface Child {
   id: string;
   name: string;
   age: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
   avatar?: string;
   interests: string[];
   sensoryNeeds: string[];

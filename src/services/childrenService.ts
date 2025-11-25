@@ -4,6 +4,7 @@ import type { Child } from '../store/childStore';
 export interface CreateChildData {
   name: string;
   age: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say';
   avatar?: string;
   interests: string[];
   sensoryNeeds: string[];
@@ -213,6 +214,7 @@ const mapDbChildToChild = (dbChild: any, activityHistory: any[] = [], achievemen
     id: dbChild.id,
     name: dbChild.name,
     age: dbChild.age,
+    gender: dbChild.gender || 'prefer-not-to-say',
     avatar: dbChild.avatar || '',
     interests: dbChild.interests || [],
     sensoryNeeds: dbChild.sensory_needs || [],
@@ -261,6 +263,7 @@ const mapChildToDb = (childData: any): any => {
   return {
     name: childData.name,
     age: childData.age,
+    gender: childData.gender || 'prefer-not-to-say',
     avatar: childData.avatar || '',
     interests: childData.interests || [],
     sensory_needs: childData.sensoryNeeds || [],
@@ -399,6 +402,7 @@ export const childrenService = {
     const dbUpdates: any = {};
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.age !== undefined) dbUpdates.age = updates.age;
+    if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
     if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
     if (updates.interests !== undefined) dbUpdates.interests = updates.interests;
     if (updates.sensoryNeeds !== undefined) dbUpdates.sensory_needs = updates.sensoryNeeds;

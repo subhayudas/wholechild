@@ -101,6 +101,7 @@ const AIProGenerator = () => {
     childProfile: activeChild ? {
       name: activeChild.name,
       age: activeChild.age,
+      gender: activeChild.gender,
       interests: activeChild.interests,
       learningStyle: activeChild.preferences.learningStyle,
       energyLevel: activeChild.preferences.energyLevel,
@@ -112,6 +113,7 @@ const AIProGenerator = () => {
     } : {
       name: '',
       age: 4,
+      gender: 'prefer-not-to-say',
       interests: [],
       learningStyle: 'mixed',
       energyLevel: 'medium',
@@ -357,6 +359,7 @@ const AIProGenerator = () => {
                       childProfile: {
                         name: child.name,
                         age: child.age,
+                        gender: child.gender,
                         interests: child.interests,
                         learningStyle: child.preferences.learningStyle,
                         energyLevel: child.preferences.energyLevel,

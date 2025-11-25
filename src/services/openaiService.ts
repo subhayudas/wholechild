@@ -27,7 +27,23 @@ export type {
   VariationType
 };
 
+// Helper function to get pronouns based on gender
+const getPronouns = (gender?: string): { subject: string; object: string; possessive: string; reflexive: string } => {
+  switch (gender) {
+    case 'male':
+      return { subject: 'he', object: 'him', possessive: 'his', reflexive: 'himself' };
+    case 'female':
+      return { subject: 'she', object: 'her', possessive: 'her', reflexive: 'herself' };
+    case 'other':
+      return { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' };
+    default:
+      // For 'prefer-not-to-say' or undefined, use they/them as neutral
+      return { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' };
+  }
+};
+
 const buildPrompt = (request: AIGenerationRequest) => {
+  const pronouns = getPronouns(request.childProfile.gender);
   const methodologyDescriptions: { [key: string]: string } = {
     montessori: "self-directed learning with structured materials, independence, and intrinsic motivation",
     reggio: "project-based exploration, documentation, and child-led investigation",
@@ -130,6 +146,8 @@ CHILD PROFILE & LEARNING NEEDS
 ═══════════════════════════════════════════════════════════════
 NAME: ${request.childProfile.name}
 AGE: ${request.childProfile.age} years old (developmental stage: ${request.childProfile.age < 3 ? 'toddler' : request.childProfile.age < 5 ? 'preschooler' : 'early elementary'})
+${request.childProfile.gender ? `GENDER: ${request.childProfile.gender}` : ''}
+PRONOUNS: Use ${pronouns.subject}/${pronouns.object}/${pronouns.possessive} when referring to ${request.childProfile.name} throughout the activity description, instructions, and guidance.
 
 PERSONAL INTERESTS & PASSIONS:
 ${request.childProfile.interests.length > 0 ? request.childProfile.interests.map((i, idx) => `  ${idx + 1}. ${i}`).join('\n') : '  (To be discovered/explored through this activity)'}
@@ -333,6 +351,8 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
           role: "system",
           content: `You are an elite early childhood education specialist and activity designer with deep expertise in:
           
+IMPORTANT: When referring to the child in your activity descriptions, instructions, and guidance, use the pronouns specified in the child profile. Do NOT assume gender - use the provided pronouns (${pronouns.subject}/${pronouns.object}/${pronouns.possessive}) consistently throughout.
+
 1. CHILD DEVELOPMENT PSYCHOLOGY: You understand developmental milestones, cognitive stages (Piaget, Vygotsky), brain development, and how learning occurs in the first 8 years of life.
 
 2. EDUCATIONAL METHODOLOGIES: You're deeply versed in Montessori, Reggio Emilia, Waldorf, HighScope, Bank Street, play-based, and inquiry-based approaches, understanding their core principles and how to authentically integrate them.
@@ -640,6 +660,7 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
   const childName = request.childProfile.name;
   const activityType = request.activityType;
   const category = request.category;
+  const pronouns = getPronouns(request.childProfile.gender);
   
   return {
     title: `${childName}'s ${activityType} Adventure`,
@@ -664,8 +685,8 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
     assessment: {
       observationPoints: [
         `How does ${childName} engage with the activity?`,
-        "What strategies do they use?",
-        "What interests them most?"
+        `What strategies does ${pronouns.subject} use?`,
+        `What interests ${pronouns.object} most?`
       ],
       milestones: [
         "Demonstrates engagement with activity",
@@ -679,8 +700,8 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
       ],
       encouragementPhrases: [
         `"Great job exploring, ${childName}!"`,
-        "I notice you're really focused on this!",
-        "Tell me what you're thinking about."
+        `"I notice ${pronouns.subject}'s really focused on this!"`,
+        `"Tell me what ${pronouns.subject}'s thinking about."`
       ],
       extensionIdeas: [
         "Extend the activity based on child's interests",

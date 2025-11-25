@@ -34,6 +34,7 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
   const [formData, setFormData] = useState({
     name: '',
     age: 3,
+    gender: 'prefer-not-to-say' as 'male' | 'female' | 'other' | 'prefer-not-to-say',
     avatar: '',
     interests: [''],
     sensoryNeeds: [''],
@@ -81,6 +82,7 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
       setFormData({
         name: child.name,
         age: child.age,
+        gender: child.gender || 'prefer-not-to-say',
         avatar: child.avatar || '',
         interests: child.interests.length ? child.interests : [''],
         sensoryNeeds: child.sensoryNeeds.length ? child.sensoryNeeds : [''],
@@ -212,6 +214,7 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
     const childData = {
       name: formData.name.trim(),
       age: formData.age,
+      gender: formData.gender,
       avatar: formData.avatar || '',
       interests: formData.interests.filter(i => i.trim()),
       sensoryNeeds: formData.sensoryNeeds.filter(n => n.trim()),
@@ -288,6 +291,28 @@ const ChildProfileForm: React.FC<ChildProfileFormProps> = ({ child, onClose, onS
               <div className="flex justify-between text-sm text-gray-500 mt-1">
                 <span>2 years</span>
                 <span>8 years</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(['male', 'female', 'other', 'prefer-not-to-say'] as const).map((genderOption) => (
+                  <motion.button
+                    key={genderOption}
+                    type="button"
+                    onClick={() => updateFormData('gender', genderOption)}
+                    className={`p-3 rounded-lg border-2 transition-all duration-300 text-sm ${
+                      formData.gender === genderOption
+                        ? 'bg-blue-100 border-blue-300 text-blue-700'
+                        : 'bg-white border-gray-200 hover:border-blue-200'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {genderOption === 'prefer-not-to-say' ? 'Prefer not to say' : genderOption.charAt(0).toUpperCase() + genderOption.slice(1)}
+                  </motion.button>
+                ))}
               </div>
             </div>
           </div>

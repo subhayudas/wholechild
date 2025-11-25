@@ -65,6 +65,11 @@ const childSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other', 'prefer-not-to-say'],
+    default: 'prefer-not-to-say'
+  },
   avatar: {
     type: String,
     default: ''

@@ -10,7 +10,23 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
 });
 
+// Helper function to get pronouns based on gender
+const getPronouns = (gender?: string): { subject: string; object: string; possessive: string; reflexive: string } => {
+  switch (gender) {
+    case 'male':
+      return { subject: 'he', object: 'him', possessive: 'his', reflexive: 'himself' };
+    case 'female':
+      return { subject: 'she', object: 'her', possessive: 'her', reflexive: 'herself' };
+    case 'other':
+      return { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' };
+    default:
+      // For 'prefer-not-to-say' or undefined, use they/them as neutral
+      return { subject: 'they', object: 'them', possessive: 'their', reflexive: 'themselves' };
+  }
+};
+
 const buildPrompt = (request: AIGenerationRequest) => {
+  const pronouns = getPronouns(request.childProfile.gender);
   const methodologyDescriptions: { [key: string]: string } = {
     montessori: "self-directed learning with structured materials, independence, and intrinsic motivation",
     reggio: "project-based exploration, documentation, and child-led investigation",
@@ -47,6 +63,8 @@ You are an expert early childhood educator and activity designer with advanced k
 CHILD PROFILE:
 - Name: ${request.childProfile.name}
 - Age: ${request.childProfile.age} years old
+${request.childProfile.gender ? `- Gender: ${request.childProfile.gender}` : ''}
+- Pronouns: Use ${pronouns.subject}/${pronouns.object}/${pronouns.possessive} when referring to ${request.childProfile.name}
 - Interests: ${request.childProfile.interests.join(', ')}
 - Learning Style: ${request.childProfile.learningStyle}
 - Energy Level: ${request.childProfile.energyLevel}
@@ -149,7 +167,11 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
       messages: [
         {
           role: "system",
-          content: "You are an expert early childhood educator and activity designer specializing in personalized learning experiences. Always respond with valid JSON only."
+          content: `You are an expert early childhood educator and activity designer specializing in personalized learning experiences. 
+
+IMPORTANT: When referring to the child in your activity descriptions, instructions, and guidance, use the pronouns specified in the child profile (${pronouns.subject}/${pronouns.object}/${pronouns.possessive}). Do NOT assume gender - use the provided pronouns consistently throughout.
+
+Always respond with valid JSON only.`
         },
         {
           role: "user",
@@ -306,6 +328,7 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
   const childName = request.childProfile.name;
   const activityType = request.activityType;
   const category = request.category;
+  const pronouns = getPronouns(request.childProfile.gender);
 
   return {
     title: `${childName}'s ${activityType} Adventure`,
@@ -318,7 +341,7 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
     instructions: [
       `Set up the activity in a way that appeals to ${childName}'s ${request.childProfile.learningStyle} learning style`,
       `Incorporate elements related to ${request.childProfile.interests.join(', ')}`,
-      "Guide the child through the activity with patience and encouragement",
+      `Guide ${childName} through the activity with patience and encouragement`,
       "Document observations and progress"
     ],
     learningObjectives: request.learningObjectives,
@@ -345,8 +368,8 @@ const generateFallbackActivity = (request: AIGenerationRequest): AIGeneratedActi
       ],
       encouragementPhrases: [
         `"Great job exploring, ${childName}!"`,
-        "I notice you're really focused on this!",
-        "Tell me what you're thinking about."
+        `"I notice ${pronouns.subject}'s really focused on this!"`,
+        `"Tell me what ${pronouns.subject}'s thinking about."`
       ],
       extensionIdeas: [
         "Extend the activity based on child's interests",

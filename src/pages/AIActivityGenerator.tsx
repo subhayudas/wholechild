@@ -132,6 +132,7 @@ const AIActivityGenerator = () => {
         childProfile: {
           name: activeChild.name,
           age: activeChild.age,
+          gender: activeChild.gender,
           interests: activeChild.interests,
           learningStyle: activeChild.preferences.learningStyle,
           energyLevel: activeChild.preferences.energyLevel,

@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const ChildProfileSchema = z.object({
   name: z.string(),
   age: z.number(),
+  gender: z.enum(['male', 'female', 'other', 'prefer-not-to-say']).optional(),
   interests: z.array(z.string()),
   learningStyle: z.string(),
   energyLevel: z.string(),
