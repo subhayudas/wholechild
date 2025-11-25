@@ -58,6 +58,50 @@ const buildPrompt = (request: AIGenerationRequest) => {
     therapyTargetsSection += `- OT Targets: ${request.therapyTargets.ot.join(', ')}\n`;
   }
 
+  // Extract detailed context from adaptationNeeds array
+  let childContextSection = '';
+  let materialDetailsSection = '';
+  let spaceDetailsSection = '';
+  let additionalContextText = '';
+
+  if (request.adaptationNeeds && request.adaptationNeeds.length > 0) {
+    const contextItems = request.adaptationNeeds.filter(item => item.toLowerCase().includes('current skills') || item.toLowerCase().includes('what works') || item.toLowerCase().includes('challenges') || item.toLowerCase().includes('recent observations'));
+    const materialItems = request.adaptationNeeds.filter(item => item.toLowerCase().includes('available materials') || item.toLowerCase().includes('constraints:') || item.toLowerCase().includes('budget notes'));
+    const spaceItems = request.adaptationNeeds.filter(item => item.toLowerCase().includes('available space') || item.toLowerCase().includes('space limitations'));
+    const additionalItems = request.adaptationNeeds.filter(item => item.toLowerCase().includes('additional context'));
+    const actualAdaptationNeeds = request.adaptationNeeds.filter(item => 
+      !item.toLowerCase().includes('current skills') && 
+      !item.toLowerCase().includes('what works') && 
+      !item.toLowerCase().includes('challenges') && 
+      !item.toLowerCase().includes('recent observations') &&
+      !item.toLowerCase().includes('available materials') &&
+      !item.toLowerCase().includes('constraints:') &&
+      !item.toLowerCase().includes('budget notes') &&
+      !item.toLowerCase().includes('available space') &&
+      !item.toLowerCase().includes('space limitations') &&
+      !item.toLowerCase().includes('additional context')
+    );
+
+    if (contextItems.length > 0) {
+      childContextSection = `\nDETAILED CHILD CONTEXT:\n${contextItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n`;
+    }
+
+    if (materialItems.length > 0) {
+      materialDetailsSection = `\nMATERIAL DETAILS & CONSTRAINTS:\n${materialItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n`;
+    }
+
+    if (spaceItems.length > 0) {
+      spaceDetailsSection = `\nSPACE CONSIDERATIONS:\n${spaceItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n`;
+    }
+
+    if (additionalItems.length > 0) {
+      additionalContextText = `\nADDITIONAL CONTEXT & NOTES:\n${additionalItems.map((item, idx) => `  ${idx + 1}. ${item}`).join('\n')}\n`;
+    }
+
+    // Update adaptationNeeds to only include actual adaptation needs
+    request.adaptationNeeds = actualAdaptationNeeds;
+  }
+
   // Build a richer context section about the child's learning profile
   const learningStyleContext = {
     'visual': 'thrives with visual aids, charts, images, and visual demonstrations',
@@ -106,6 +150,8 @@ THERAPEUTIC GOALS:
 ${request.childProfile.speechGoals.length > 0 ? `  Speech & Language: ${request.childProfile.speechGoals.join(', ')}` : '  No specific speech goals noted'}
 ${request.childProfile.otGoals.length > 0 ? `  Occupational Therapy: ${request.childProfile.otGoals.join(', ')}` : '  No specific OT goals noted'}
 
+${childContextSection}
+
 ═══════════════════════════════════════════════════════════════
 ACTIVITY SPECIFICATIONS
 ═══════════════════════════════════════════════════════════════
@@ -120,12 +166,18 @@ ${selectedMethodologies || 'Flexible approach - incorporate best practices from 
 MATERIAL CONSTRAINTS:
 ${request.materialConstraints.length > 0 ? request.materialConstraints.map((constraint, idx) => `  ${idx + 1}. ${constraint}`).join('\n') : '  No specific constraints - use age-appropriate materials'}
 
+${materialDetailsSection}
+
+${spaceDetailsSection}
+
 LEARNING OBJECTIVES (Target Outcomes):
 ${request.learningObjectives.length > 0 ? request.learningObjectives.map((obj, idx) => `  ${idx + 1}. ${obj}`).join('\n') : '  Focus on age-appropriate developmental growth across domains'}
 
 ${therapyTargetsSection ? `THERAPY TARGETS:\n${therapyTargetsSection}` : ''}
 
 ${request.adaptationNeeds.length > 0 ? `ADAPTATION NEEDS:\n${request.adaptationNeeds.map((need, idx) => `  ${idx + 1}. ${need}`).join('\n')}\n` : ''}
+
+${additionalContextText}
 
 ${advancedFeatures ? `ADVANCED FEATURES & OPTIMIZATIONS:\n${advancedFeatures.split(', ').map((feature, idx) => `  ${idx + 1}. ${feature}`).join('\n')}\n` : ''}
 

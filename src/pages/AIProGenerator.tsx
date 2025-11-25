@@ -74,6 +74,29 @@ const AIProGenerator = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
+  // Additional detailed input states
+  const [detailedLearningObjectives, setDetailedLearningObjectives] = useState<Array<{objective: string, description: string}>>([{objective: '', description: ''}]);
+  const [childContext, setChildContext] = useState({
+    currentSkills: '',
+    whatWorks: '',
+    challenges: '',
+    recentObservations: ''
+  });
+  const [materialDetails, setMaterialDetails] = useState({
+    availableMaterials: '',
+    materialConstraints: '',
+    budgetNotes: ''
+  });
+  const [spaceConstraints, setSpaceConstraints] = useState({
+    availableSpace: '',
+    spaceLimitations: ''
+  });
+  const [therapyDetails, setTherapyDetails] = useState({
+    speechDetails: '',
+    otDetails: ''
+  });
+  const [additionalContext, setAdditionalContext] = useState('');
+  
   const [formData, setFormData] = useState<Partial<AIGenerationRequest>>({
     childProfile: activeChild ? {
       name: activeChild.name,
@@ -146,11 +169,52 @@ const AIProGenerator = () => {
 
     setIsGenerating(true);
     try {
-      const activity = await generateActivityWithAI(formData as AIGenerationRequest);
+      // Build enhanced request with detailed inputs
+      const enhancedRequest: AIGenerationRequest = {
+        ...formData as AIGenerationRequest,
+        // Include detailed learning objectives
+        learningObjectives: detailedLearningObjectives
+          .filter(obj => obj.objective.trim() !== '')
+          .map(obj => obj.description.trim() !== '' 
+            ? `${obj.objective}: ${obj.description}` 
+            : obj.objective),
+        // Add detailed context to material constraints
+        materialConstraints: [
+          ...(formData.materialConstraints || []),
+          ...(materialDetails.availableMaterials.trim() ? [`Available materials: ${materialDetails.availableMaterials}`] : []),
+          ...(materialDetails.materialConstraints.trim() ? [`Constraints: ${materialDetails.materialConstraints}`] : []),
+          ...(materialDetails.budgetNotes.trim() ? [`Budget notes: ${materialDetails.budgetNotes}`] : []),
+          ...(spaceConstraints.availableSpace.trim() ? [`Available space: ${spaceConstraints.availableSpace}`] : []),
+          ...(spaceConstraints.spaceLimitations.trim() ? [`Space limitations: ${spaceConstraints.spaceLimitations}`] : [])
+        ],
+        // Add detailed therapy targets
+        therapyTargets: {
+          speech: [
+            ...(formData.therapyTargets?.speech || []),
+            ...(therapyDetails.speechDetails.trim() ? [therapyDetails.speechDetails] : [])
+          ],
+          ot: [
+            ...(formData.therapyTargets?.ot || []),
+            ...(therapyDetails.otDetails.trim() ? [therapyDetails.otDetails] : [])
+          ]
+        },
+        // Add child context to adaptation needs
+        adaptationNeeds: [
+          ...(formData.adaptationNeeds || []),
+          ...(childContext.currentSkills.trim() ? [`Current skills: ${childContext.currentSkills}`] : []),
+          ...(childContext.whatWorks.trim() ? [`What works well: ${childContext.whatWorks}`] : []),
+          ...(childContext.challenges.trim() ? [`Challenges: ${childContext.challenges}`] : []),
+          ...(childContext.recentObservations.trim() ? [`Recent observations: ${childContext.recentObservations}`] : []),
+          ...(additionalContext.trim() ? [`Additional context: ${additionalContext}`] : [])
+        ]
+      };
+
+      const activity = await generateActivityWithAI(enhancedRequest);
       setGeneratedActivity(activity);
       toast.success('Activity generated successfully!');
     } catch (error) {
       console.error('Error generating activity:', error);
+      toast.error('Failed to generate activity. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -453,6 +517,224 @@ const AIProGenerator = () => {
                 </div>
               </div>
 
+              {/* Detailed Learning Objectives */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-indigo-600" />
+                  Learning Objectives
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Specify what you want the child to learn or achieve through this activity</p>
+                <div className="space-y-3">
+                  {detailedLearningObjectives.map((obj, index) => (
+                    <div key={index} className="bg-white rounded-lg border border-gray-200 p-3 space-y-2">
+                      <input
+                        type="text"
+                        placeholder="Learning objective (e.g., 'Develop fine motor skills')"
+                        value={obj.objective}
+                        onChange={(e) => {
+                          const updated = [...detailedLearningObjectives];
+                          updated[index].objective = e.target.value;
+                          setDetailedLearningObjectives(updated);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                      />
+                      <textarea
+                        placeholder="Describe in detail what this means and why it's important..."
+                        value={obj.description}
+                        onChange={(e) => {
+                          const updated = [...detailedLearningObjectives];
+                          updated[index].description = e.target.value;
+                          setDetailedLearningObjectives(updated);
+                        }}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                      />
+                      {detailedLearningObjectives.length > 1 && (
+                        <button
+                          onClick={() => setDetailedLearningObjectives(detailedLearningObjectives.filter((_, i) => i !== index))}
+                          className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setDetailedLearningObjectives([...detailedLearningObjectives, {objective: '', description: ''}])}
+                    className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Another Objective
+                  </button>
+                </div>
+              </div>
+
+              {/* Child Context */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-indigo-600" />
+                  Child Context & Background
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Provide details about the child's current abilities, preferences, and experiences</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Skills & Abilities</label>
+                    <textarea
+                      placeholder="What can the child currently do? What skills have they mastered? (e.g., 'Can count to 20, recognizes letters A-F, enjoys building with blocks')"
+                      value={childContext.currentSkills}
+                      onChange={(e) => setChildContext(prev => ({ ...prev, currentSkills: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">What Works Well</label>
+                    <textarea
+                      placeholder="What activities, approaches, or strategies have been successful with this child? (e.g., 'Responds well to visual schedules, loves hands-on activities, needs movement breaks')"
+                      value={childContext.whatWorks}
+                      onChange={(e) => setChildContext(prev => ({ ...prev, whatWorks: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Current Challenges</label>
+                    <textarea
+                      placeholder="What areas need support? What difficulties has the child been experiencing? (e.g., 'Struggles with transitions, difficulty with fine motor tasks, needs support with social interactions')"
+                      value={childContext.challenges}
+                      onChange={(e) => setChildContext(prev => ({ ...prev, challenges: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Recent Observations</label>
+                    <textarea
+                      placeholder="Any recent observations or notes about the child's behavior, interests, or development? (e.g., 'Recently showed interest in dinosaurs, has been more verbal this week, enjoys helping with tasks')"
+                      value={childContext.recentObservations}
+                      onChange={(e) => setChildContext(prev => ({ ...prev, recentObservations: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Materials & Constraints */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-indigo-600" />
+                  Materials & Constraints
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Specify available materials, constraints, and space considerations</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Materials</label>
+                    <textarea
+                      placeholder="What materials do you have available? Be specific. (e.g., 'Construction paper, markers, glue, scissors, cardboard boxes, playdough, wooden blocks')"
+                      value={materialDetails.availableMaterials}
+                      onChange={(e) => setMaterialDetails(prev => ({ ...prev, availableMaterials: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Material Constraints</label>
+                    <textarea
+                      placeholder="Any limitations or restrictions? (e.g., 'No access to printer, prefer reusable materials, need items that are easy to clean')"
+                      value={materialDetails.materialConstraints}
+                      onChange={(e) => setMaterialDetails(prev => ({ ...prev, materialConstraints: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Budget Notes</label>
+                    <textarea
+                      placeholder="Budget considerations or preferences (e.g., 'Prefer low-cost options, can spend up to $20, need free alternatives')"
+                      value={materialDetails.budgetNotes}
+                      onChange={(e) => setMaterialDetails(prev => ({ ...prev, budgetNotes: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Space</label>
+                    <textarea
+                      placeholder="Describe the space where the activity will take place (e.g., 'Small living room, kitchen table, outdoor patio, classroom with 4 tables')"
+                      value={spaceConstraints.availableSpace}
+                      onChange={(e) => setSpaceConstraints(prev => ({ ...prev, availableSpace: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Space Limitations</label>
+                    <textarea
+                      placeholder="Any space-related constraints? (e.g., 'Limited floor space, need quiet activity, must be contained to table')"
+                      value={spaceConstraints.spaceLimitations}
+                      onChange={(e) => setSpaceConstraints(prev => ({ ...prev, spaceLimitations: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Therapy Details */}
+              {(formData.childProfile?.speechGoals?.length > 0 || formData.childProfile?.otGoals?.length > 0 || formData.therapyTargets?.speech?.length > 0 || formData.therapyTargets?.ot?.length > 0) && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-indigo-600" />
+                    Therapy Goals & Details
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">Provide specific details about therapy targets and goals</p>
+                  <div className="space-y-4">
+                    {(formData.childProfile?.speechGoals?.length > 0 || formData.therapyTargets?.speech?.length > 0) && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Speech & Language Details</label>
+                        <textarea
+                          placeholder="Provide specific details about speech/language goals, current abilities, and what you'd like to target (e.g., 'Working on /s/ sound in initial position, expanding vocabulary with action words, improving sentence length to 4-5 words')"
+                          value={therapyDetails.speechDetails}
+                          onChange={(e) => setTherapyDetails(prev => ({ ...prev, speechDetails: e.target.value }))}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                    )}
+                    {(formData.childProfile?.otGoals?.length > 0 || formData.therapyTargets?.ot?.length > 0) && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Occupational Therapy Details</label>
+                        <textarea
+                          placeholder="Provide specific details about OT goals, current abilities, and what you'd like to target (e.g., 'Improving pencil grip, working on bilateral coordination, developing hand strength, sensory regulation strategies')"
+                          value={therapyDetails.otDetails}
+                          onChange={(e) => setTherapyDetails(prev => ({ ...prev, otDetails: e.target.value }))}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Context */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-indigo-600" />
+                  Additional Context & Notes
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">Any other important information, preferences, or context that would help create a better activity</p>
+                <textarea
+                  placeholder="Add any additional context, special considerations, cultural preferences, family values, or other details that would help personalize this activity..."
+                  value={additionalContext}
+                  onChange={(e) => setAdditionalContext(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                />
+              </div>
+
               {/* Advanced Options */}
               <AnimatePresence>
                 {showAdvancedOptions && (
@@ -497,6 +779,138 @@ const AIProGenerator = () => {
                           <option value="above-age">Above Age Level</option>
                           <option value="adaptive">Adaptive</option>
                         </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Time of Day</label>
+                        <select
+                          value={formData.advancedOptions?.timeOfDay || 'any'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            advancedOptions: { ...prev.advancedOptions, timeOfDay: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="any">Any Time</option>
+                          <option value="morning">Morning</option>
+                          <option value="afternoon">Afternoon</option>
+                          <option value="evening">Evening</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Parent Involvement</label>
+                        <select
+                          value={formData.advancedOptions?.parentInvolvement || 'moderate'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            advancedOptions: { ...prev.advancedOptions, parentInvolvement: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="minimal">Minimal (Child-led)</option>
+                          <option value="moderate">Moderate (Guided)</option>
+                          <option value="high">High (Collaborative)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Technology Integration</label>
+                        <select
+                          value={formData.advancedOptions?.technologyIntegration || 'none'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            advancedOptions: { ...prev.advancedOptions, technologyIntegration: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="none">None</option>
+                          <option value="optional">Optional</option>
+                          <option value="integrated">Integrated</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Assessment Type</label>
+                        <select
+                          value={formData.advancedOptions?.assessmentType || 'observational'}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            advancedOptions: { ...prev.advancedOptions, assessmentType: e.target.value }
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          <option value="observational">Observational</option>
+                          <option value="checklist">Checklist</option>
+                          <option value="rubric">Rubric</option>
+                          <option value="portfolio">Portfolio</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-900 mb-3">Additional Options</h4>
+                      <div className="space-y-2">
+                        <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.advancedOptions?.generateExtensionActivities || false}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              advancedOptions: { ...prev.advancedOptions, generateExtensionActivities: e.target.checked }
+                            }))}
+                            className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Generate Extension Activities</div>
+                            <div className="text-xs text-gray-500">Create follow-up activities that build on this one</div>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.advancedOptions?.generateAssessmentRubric || false}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              advancedOptions: { ...prev.advancedOptions, generateAssessmentRubric: e.target.checked }
+                            }))}
+                            className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Generate Assessment Rubric</div>
+                            <div className="text-xs text-gray-500">Create a detailed rubric for evaluating progress</div>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.advancedOptions?.generateReflectionPrompts || false}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              advancedOptions: { ...prev.advancedOptions, generateReflectionPrompts: e.target.checked }
+                            }))}
+                            className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Generate Reflection Prompts</div>
+                            <div className="text-xs text-gray-500">Include questions for child, parent, and educator reflection</div>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.advancedOptions?.includeMultimedia || false}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              advancedOptions: { ...prev.advancedOptions, includeMultimedia: e.target.checked }
+                            }))}
+                            className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">Include Multimedia Suggestions</div>
+                            <div className="text-xs text-gray-500">Suggest photos, videos, and audio elements</div>
+                          </div>
+                        </label>
                       </div>
                     </div>
                   </motion.div>
