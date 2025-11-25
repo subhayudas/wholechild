@@ -64,7 +64,7 @@ import { categories, methodologies } from '../config/activityConfig';
 import toast from 'react-hot-toast';
 
 const AIProGenerator = () => {
-  const { children, activeChild } = useChildStore();
+  const { children, activeChild, fetchChildren, isLoading: isChildrenLoading } = useChildStore();
   const { addActivity } = useActivityStore();
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -74,6 +74,13 @@ const AIProGenerator = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
+  // Fetch children if none exist
+  useEffect(() => {
+    if (children.length === 0) {
+      fetchChildren();
+    }
+  }, [children.length, fetchChildren]);
+
   // Additional detailed input states
   const [detailedLearningObjectives, setDetailedLearningObjectives] = useState<Array<{objective: string, description: string}>>([{objective: '', description: ''}]);
   const [childContext, setChildContext] = useState({
@@ -163,9 +170,36 @@ const AIProGenerator = () => {
     testConnection();
   }, []);
 
+  // Sync formData with activeChild changes
+  useEffect(() => {
+    if (activeChild) {
+      setFormData(prev => ({
+        ...prev,
+        childProfile: {
+          name: activeChild.name,
+          age: activeChild.age,
+          gender: activeChild.gender,
+          interests: activeChild.interests,
+          learningStyle: activeChild.preferences.learningStyle,
+          energyLevel: activeChild.preferences.energyLevel,
+          socialPreference: activeChild.preferences.socialPreference,
+          sensoryNeeds: activeChild.sensoryNeeds,
+          speechGoals: activeChild.speechGoals,
+          otGoals: activeChild.otGoals,
+          developmentalAreas: []
+        }
+      }));
+    }
+  }, [activeChild]);
+
   const handleGenerate = async () => {
     if (!formData.activityType || !formData.category) {
       toast.error('Please select activity type and category');
+      return;
+    }
+
+    if (!formData.childProfile?.name) {
+      toast.error('Please select a child profile');
       return;
     }
 
@@ -214,9 +248,9 @@ const AIProGenerator = () => {
       const activity = await generateActivityWithAI(enhancedRequest);
       setGeneratedActivity(activity);
       toast.success('Activity generated successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating activity:', error);
-      toast.error('Failed to generate activity. Please try again.');
+      toast.error(error.message || 'Failed to generate activity. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -318,13 +352,18 @@ const AIProGenerator = () => {
         </motion.div>
 
         {/* Child Selector */}
-        {children.length > 0 && (
-          <motion.div
-            className="py-3 border-b border-gray-100"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
+        <motion.div
+          className="py-3 border-b border-gray-100"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        >
+          {isChildrenLoading ? (
+            <div className="flex items-center justify-center py-2 gap-2 text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Loading profiles...</span>
+            </div>
+          ) : children.length > 0 ? (
             <div className="flex gap-2 overflow-x-auto px-4">
               {children.map((child) => (
                 <button
@@ -364,8 +403,22 @@ const AIProGenerator = () => {
                 </button>
               ))}
             </div>
-          </motion.div>
-        )}
+          ) : (
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 mx-4 rounded-lg border border-gray-200 border-dashed">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <User className="w-4 h-4" />
+                <span>No child profiles found.</span>
+              </div>
+              <button
+                onClick={() => window.location.href = '/dashboard'}
+                className="text-sm text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Add Child Profile
+              </button>
+            </div>
+          )}
+        </motion.div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-12 h-full">
