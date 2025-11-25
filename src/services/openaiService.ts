@@ -666,7 +666,7 @@ export const generateActivityWithAI = async (request: AIGenerationRequest): Prom
     const pronouns = getPronouns(request.childProfile.gender);
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -1019,7 +1019,7 @@ export const generateActivityVariations = async (
   for (let i = 0; i < Math.min(count, variationPrompts.length); i++) {
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -1095,7 +1095,7 @@ export const analyzeActivityQuality = async (activity: AIGeneratedActivity): Pro
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
