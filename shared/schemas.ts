@@ -146,21 +146,14 @@ export const AIGeneratedActivitySchema = z.object({
   digitalResources: DigitalResourcesSchema
 });
 
-// Quality Analysis Schema (Enhanced)
+// Quality Analysis Schema
 export const QualityAnalysisSchema = z.object({
   overallScore: z.number(),
   engagement: z.number(),
   educationalValue: z.number(),
   clarity: z.number(),
   adaptability: z.number(),
-  developmentalAppropriateness: z.number(),
-  therapeuticIntegration: z.number(),
-  safetyConsideration: z.number(),
-  methodologyAlignment: z.number(),
-  strengths: z.array(z.string()),
-  areasForImprovement: z.array(z.string()),
-  suggestions: z.array(z.string()),
-  expertCommentary: z.string()
+  suggestions: z.array(z.string())
 });
 
 // Variation Type Schema
