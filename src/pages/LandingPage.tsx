@@ -39,9 +39,9 @@ const LandingPage = () => {
         <nav
           data-state={menuState ? 'active' : undefined}
           className="group fixed z-20 w-full border-b border-dashed bg-white/80 backdrop-blur-md md:relative dark:bg-zinc-950/50 lg:dark:bg-transparent border-gray-200 dark:border-gray-800">
-          <div className="w-full px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-6 py-3 lg:gap-0 lg:py-4">
-              <div className="flex w-full justify-between lg:w-auto">
+          <div className="w-full px-4 sm:px-6 md:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 md:gap-6 py-3 md:py-4">
+              <div className="flex w-full justify-between md:w-auto">
                 <Link
                   to="/"
                   aria-label="home"
@@ -51,7 +51,7 @@ const LandingPage = () => {
                 <button
                   onClick={() => setMenuState(!menuState)}
                   aria-label={menuState ? 'Close Menu' : 'Open Menu'}
-                  className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden text-gray-900 dark:text-gray-100">
+                  className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 md:hidden text-gray-900 dark:text-gray-100">
                   <Menu className={cn(
                     "m-auto size-6 duration-200",
                     menuState && "rotate-180 scale-0 opacity-0"
@@ -63,11 +63,11 @@ const LandingPage = () => {
                 </button>
               </div>
               <div className={cn(
-                "bg-white dark:bg-gray-900 mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none dark:shadow-none dark:lg:bg-transparent",
-                menuState && "block lg:flex"
+                "bg-white dark:bg-gray-900 mb-6 hidden w-full flex-wrap items-center justify-end space-y-6 md:space-y-8 rounded-3xl border border-gray-200 dark:border-gray-800 p-4 md:p-6 shadow-2xl shadow-zinc-300/20 md:flex-nowrap md:m-0 md:flex md:w-fit md:gap-4 lg:gap-6 md:space-y-0 md:border-transparent md:bg-transparent md:p-0 md:shadow-none dark:shadow-none dark:md:bg-transparent",
+                menuState && "block md:flex"
               )}>
-                <div className="lg:pr-4">
-                  <ul className="space-y-6 text-base lg:flex lg:gap-8 lg:space-y-0 lg:text-sm">
+                <div className="md:pr-4">
+                  <ul className="space-y-6 text-base md:flex md:gap-4 lg:gap-8 md:space-y-0 md:text-sm">
                     {menuItems.map((item, index) => (
                       <li key={index}>
                         <a
@@ -79,17 +79,17 @@ const LandingPage = () => {
                     ))}
                   </ul>
                 </div>
-                <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit lg:border-l lg:border-gray-200 lg:pl-6 dark:lg:border-gray-800">
+                <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit md:border-l md:border-gray-200 md:pl-4 lg:pl-6 dark:md:border-gray-800">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-full text-sm md:text-sm"
                     onClick={(e) => { e.preventDefault(); handleGoogleSignIn(); }}>
                     <span>Login</span>
                   </Button>
                   <Button
                     size="sm"
-                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset]"
+                    className="rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] text-sm md:text-sm"
                     onClick={handleGoogleSignIn}
                     disabled={isLoading}>
                     {isLoading ? (
@@ -111,15 +111,15 @@ const LandingPage = () => {
       <main>
         {/* New Hero Section based on inspiration */}
         <ShaderBackground>
-          <div className="relative z-10 max-w-[1060px] mx-auto px-4 pt-[120px] pb-16 md:pt-[180px] lg:pt-[216px]">
-            <div className="flex flex-col items-center gap-12">
+          <div className="relative z-10 max-w-[1060px] mx-auto px-4 sm:px-6 md:px-8 pt-[100px] sm:pt-[120px] md:pt-[160px] lg:pt-[216px] pb-12 md:pb-16">
+            <div className="flex flex-col items-center gap-8 md:gap-12">
               {/* Hero Content */}
-              <div className="max-w-[937px] flex flex-col items-center gap-3">
-                <div className="flex flex-col items-center gap-6">
-                  <h1 className="max-w-[800px] text-center text-white text-5xl md:text-[80px] font-normal leading-tight md:leading-[96px] font-serif drop-shadow-sm">
+              <div className="max-w-[937px] flex flex-col items-center gap-3 md:gap-4">
+                <div className="flex flex-col items-center gap-4 md:gap-6">
+                  <h1 className="max-w-[800px] text-center text-white text-3xl sm:text-4xl md:text-5xl lg:text-[80px] font-normal leading-tight sm:leading-[1.1] md:leading-tight lg:leading-[96px] font-serif drop-shadow-sm px-2">
                     Nurture Every Child's Potential with WholeChild
                   </h1>
-                  <p className="max-w-[600px] text-center text-gray-200 text-lg font-medium leading-7 drop-shadow-sm">
+                  <p className="max-w-[600px] text-center text-gray-200 text-base sm:text-lg md:text-lg font-medium leading-6 md:leading-7 drop-shadow-sm px-4">
                     A comprehensive platform connecting parents, educators, and therapists to support holistic child development through personalized activities, progress tracking, and expert guidance.
                   </p>
                 </div>
@@ -146,18 +146,18 @@ const LandingPage = () => {
         </ShaderBackground>
 
         {/* Features Section - Adapted spacing */}
-        <section id="features" className="py-20 bg-white dark:bg-zinc-950">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-serif text-gray-900 dark:text-white mb-4">
+        <section id="features" className="py-12 sm:py-16 md:py-20 bg-white dark:bg-zinc-950">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <div className="text-center mb-10 sm:mb-12 md:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-gray-900 dark:text-white mb-3 md:mb-4 px-4">
                 Everything You Need for Holistic Development
               </h2>
-              <p className="text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto px-4">
                 Our platform brings together the best tools and expertise to support every aspect of your child's growth.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
               {[
                 {
                   icon: Brain,

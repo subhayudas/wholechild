@@ -109,7 +109,7 @@ const App = () => {
       ) : (
         <div className="min-h-screen bg-gray-50">
           <Navigation />
-          <main className="pt-16">
+          <main className="pt-16 md:pt-20">
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/child-profile" element={<ChildProfile />} />
